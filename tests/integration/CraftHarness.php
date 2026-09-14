@@ -3,6 +3,7 @@
 namespace lameco\rankroute\tests\integration;
 
 use Craft;
+use craft\helpers\App;
 use craft\helpers\Db;
 use craft\helpers\Session;
 use craft\migrations\Install as CraftInstall;
@@ -122,6 +123,38 @@ final class CraftHarness
         gc_collect_cycles();
     }
 
+    /**
+     * Replaces the console app's `request` and `response` components with their
+     * `craft\web` equivalents.
+     *
+     * The harness boots Craft as a console app (see the class docblock), so
+     * `Craft::$app->getRequest()`/`getResponse()` are `craft\console` objects by default —
+     * neither has `getHeaders()`/`asJson()`'s `format`, which `craft\web\Controller` and our
+     * actions both need. Dispatching one of this plugin's actions needs the real things.
+     */
+    public static function useWebRequest(): void
+    {
+        $_SERVER['HTTP_HOST'] = 'rankroute.test';
+        $_SERVER['SERVER_NAME'] = 'rankroute.test';
+        $_SERVER['SERVER_PORT'] = '443';
+        $_SERVER['HTTPS'] = 'on';
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $_SERVER['REQUEST_URI'] = '/';
+        $_SERVER['SCRIPT_NAME'] = '/index.php';
+        $_SERVER['QUERY_STRING'] = '';
+
+        Craft::$app->set('request', array_merge(App::webRequestConfig(), [
+            'isConsoleRequest' => false,
+        ]));
+        Craft::$app->set('response', App::webResponseConfig());
+
+        // The app booted as a console app, so craft\base\Plugin guessed a console controller
+        // namespace when it first loaded the plugin (vendor/craftcms/cms/src/base/Plugin.php:116-121).
+        // Point it at the web controllers for the dispatch under test; production never hits
+        // this because a real /actions/ request boots a web app.
+        self::plugin()->controllerNamespace = 'lameco\\rankroute\\controllers';
+    }
+
     public static function plugin(): Plugin
     {
         $plugin = Craft::$app->getPlugins()->getPlugin('rankroute');
@@ -224,11 +257,17 @@ final class CraftHarness
     /**
      * All three channels, because Craft's App::env() reads $_SERVER before getenv().
      */
-    private static function setEnv(string $name, string $value): void
+    public static function setEnv(string $name, string $value): void
     {
         putenv("{$name}={$value}");
         $_ENV[$name] = $value;
         $_SERVER[$name] = $value;
+    }
+
+    public static function unsetEnv(string $name): void
+    {
+        putenv($name);
+        unset($_ENV[$name], $_SERVER[$name]);
     }
 
     /**
