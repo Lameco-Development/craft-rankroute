@@ -1,0 +1,59 @@
+{
+    "name": "lameco/craft-rankroute",
+    "description": "RankRoute connector for Craft CMS: element export/import for AI content optimisation and bulk SEO meta import",
+    "type": "craft-plugin",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.2",
+        "craftcms/cms": "^5.8.0"
+    },
+    "require-dev": {
+        "craftcms/ecs": "dev-main",
+        "craftcms/phpstan": "dev-main",
+        "nystudio107/craft-seomatic": "^5.1",
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^11.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "lameco\\rankroute\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "lameco\\rankroute\\tests\\": "tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Laméco",
+            "homepage": "https://www.lameco.nl"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/Lameco-Development/craft-rankroute/issues",
+        "source": "https://github.com/Lameco-Development/craft-rankroute"
+    },
+    "extra": {
+        "handle": "rankroute",
+        "name": "RankRoute",
+        "developer": "Laméco",
+        "documentationUrl": ""
+    },
+    "scripts": {
+        "check-cs": "ecs check --ansi",
+        "fix-cs": "ecs check --ansi --fix",
+        "phpstan": "phpstan --memory-limit=1G",
+        "test": "phpunit"
+    },
+    "config": {
+        "sort-packages": true,
+        "platform": {
+            "php": "8.4"
+        },
+        "allow-plugins": {
+            "yiisoft/yii2-composer": true,
+            "craftcms/plugin-installer": true
+        }
+    }
+}

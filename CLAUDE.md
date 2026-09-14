@@ -1,0 +1,47 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Stack
+
+Craft CMS 5 plugin, PHP 8.2+ (Composer platform pinned to 8.4). Handle `rankroute`, package `lameco/craft-rankroute`, namespace `lameco\rankroute`. No frontend build, no Twig — the plugin is an HTTP API for the RankRoute n8n flows.
+
+## Commands
+
+```bash
+composer check-cs   # ECS, dry run
+composer fix-cs     # ECS, applying fixes
+composer phpstan    # PHPStan level 4 (config in phpstan.neon)
+composer test       # PHPUnit — unit tests in tests/unit, integration tests in tests/integration
+```
+
+Integration tests boot a real Craft app against a MySQL database named in `tests/.env` (copy `tests/.env.example`); the harness drops every table in it, so the name must contain `test`.
+
+## Repo operations
+
+- PRs are squash-merged into `main`. The PR title must be a Conventional Commit (`feat:`/`fix:`/`refactor:`/`test:`/`chore:`/`ci:`/`docs:`) — it becomes the squash commit message that release-please reads.
+- release-please owns versioning, tags, releases, and `CHANGELOG.md`; never edit those by hand. The first release is `0.0.1` (pinned via `initial-version` in `release-please-config.json`).
+- CI (`.github/workflows/ci.yml`) runs ECS, PHPStan and the full PHPUnit suite (unit + integration, MySQL service container) on PHP 8.2 and 8.4, on PRs and pushes to `main`.
+
+## What this plugin is
+
+One plugin replacing two: `lameco/craft-entry-optimizer` (export an element to JSON, import AI-edited JSON back as a draft with only the changed fields) and `lameco/craft-seo-import` (bulk-write SEOmatic meta title/description from `[{url, meta_title, meta_description}]`). The decisions behind the merge are in `docs/adr/0001-one-plugin-replaces-two.md`; the vocabulary is in `CONTEXT.md`.
+
+## Architecture (target, filled in per phase)
+
+- `controllers/OptimizerController` — `export`, `import`, `status`
+- `controllers/SeoController` — `import` (bulk meta)
+- `services/ElementResolver` — URL or path → `{siteId, uri}` by longest site base-path prefix, then `Elements::getElementByUri()`
+- `services/ExportService`, `services/ImportService`, `services/FieldHandlerRegistry`, `services/fieldhandlers/*` — carried over from entry-optimizer
+- `services/SeoBulkService` — carried over from seo-import's controller
+- `dto/*` — readonly result objects with `toArray()`
+
+Legacy action paths (`/actions/_craft-entry-optimizer/optimized-entry/*`, `/actions/_craft-seo-import/api/import`) are served by this plugin through the 0.0.x line — see `docs/adr/0002-legacy-action-aliases.md`.
+
+## Auth
+
+Every endpoint except `status` requires `Authorization: Bearer <RANKROUTE_API_KEY>`. No CP-session fallback. The key lives in `.env` only; there is no settings UI.
+
+## Domain docs
+
+Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. Add an ADR when a decision changes a boundary or a contract that n8n depends on.
