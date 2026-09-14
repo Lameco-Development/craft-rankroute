@@ -57,9 +57,16 @@ abstract class IntegrationTestCase extends TestCase
      * Dispatches a route through the booted app the way an HTTP request would, per the
      * Yii module/controllerMap resolution ADR 0002 depends on. Craft's own
      * {@see \craft\web\Controller} needs a real web request, hence {@see CraftHarness::useWebRequest()}.
+     *
+     * @param array<string, mixed> $queryParams `$_GET`-equivalent for actions that read query params (e.g. `export`).
+     * @param string|null $rawBody The raw POST body for actions that read it directly (e.g. `import`).
      */
-    protected function runAction(string $route, ?string $authorization = null): Response
-    {
+    protected function runAction(
+        string $route,
+        ?string $authorization = null,
+        array $queryParams = [],
+        ?string $rawBody = null,
+    ): Response {
         CraftHarness::useWebRequest();
 
         // Craft only registers a plugin as a Yii module (ADR 0002) once it has actually
@@ -67,10 +74,19 @@ abstract class IntegrationTestCase extends TestCase
         // own handle nor the legacy module ids `Plugin::init()` registers.
         $this->plugin();
 
-        $headers = Craft::$app->getRequest()->getHeaders();
+        $request = Craft::$app->getRequest();
+        $headers = $request->getHeaders();
 
         if ($authorization !== null) {
             $headers->set('Authorization', $authorization);
+        }
+
+        if ($queryParams !== []) {
+            $request->setQueryParams($queryParams);
+        }
+
+        if ($rawBody !== null) {
+            $request->setRawBody($rawBody);
         }
 
         $result = Craft::$app->runAction($route);

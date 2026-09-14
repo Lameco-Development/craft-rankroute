@@ -6,6 +6,7 @@ use Craft;
 use lameco\rankroute\controllers\OptimizerController;
 use lameco\rankroute\controllers\SeoController;
 use PHPUnit\Framework\Attributes\DataProvider;
+use yii\web\BadRequestHttpException;
 
 /**
  * The spike ADR 0002 is conditional on: every new action path, and every legacy alias
@@ -87,22 +88,34 @@ final class ActionDispatchTest extends IntegrationTestCase
         ], $data);
     }
 
+    /**
+     * Export/import are implemented as of issue #2 (business behaviour lives in
+     * OptimizerExportImportTest, including the legacy-vs-new document parity check); here
+     * only dispatch is under test, so no request body is required to prove the legacy path
+     * reached the real action instead of the stub.
+     */
     public function testLegacyExportDispatchesThroughToOptimizerExport(): void
     {
         $this->setApiKey('correct-key');
 
-        $response = $this->runAction('_craft-entry-optimizer/optimized-entry/export', 'Bearer correct-key');
-
-        self::assertSame(501, $response->getStatusCode());
+        try {
+            $this->runAction('_craft-entry-optimizer/optimized-entry/export', 'Bearer correct-key');
+            self::fail('Expected a BadRequestHttpException.');
+        } catch (BadRequestHttpException $e) {
+            self::assertSame('An element ID or slug is required.', $e->getMessage());
+        }
     }
 
     public function testLegacyImportDispatchesThroughToOptimizerImport(): void
     {
         $this->setApiKey('correct-key');
 
-        $response = $this->runAction('_craft-entry-optimizer/optimized-entry/import', 'Bearer correct-key');
-
-        self::assertSame(501, $response->getStatusCode());
+        try {
+            $this->runAction('_craft-entry-optimizer/optimized-entry/import', 'Bearer correct-key');
+            self::fail('Expected a BadRequestHttpException.');
+        } catch (BadRequestHttpException $e) {
+            self::assertSame('No JSON data provided in request body.', $e->getMessage());
+        }
     }
 
     public function testLegacySeoImportDispatchesThroughToSeoImport(): void
