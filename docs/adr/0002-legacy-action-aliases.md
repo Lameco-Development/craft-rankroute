@@ -1,7 +1,7 @@
 # ADR 0002: Legacy action aliases by registering the plugin under the old module ids
 
 Date: 2026-09-14
-Status: proposed — becomes accepted when the Phase 1 integration test passes
+Status: accepted
 
 ## Context
 
