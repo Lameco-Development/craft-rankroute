@@ -8,4 +8,4 @@ parameters:
         - tests
     excludePaths:
         # The integration-test app writes runtime state (compiled classes, logs) here.
-        - tests/_craft/storage
+        - tests/_craft/storage (?)
