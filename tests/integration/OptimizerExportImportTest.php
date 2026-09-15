@@ -271,6 +271,33 @@ final class OptimizerExportImportTest extends ContentFixtureTestCase
     }
 
     /**
+     * D13 (issue #3): a changed `seoTitle` imported through the optimizer path must
+     * persist and be readable back from the resulting draft. If it does not,
+     * {@see \lameco\rankroute\services\fieldhandlers\SeomaticFieldHandler::import()} needs
+     * the `override-*` flags alongside the values — SEOmatic otherwise falls back to the
+     * element's inherited/global meta instead of the value just written.
+     */
+    public function testImportOfAChangedSeoTitlePersistsAndReadsBackFromTheDraft(): void
+    {
+        $exportResponse = $this->runAction('rankroute/optimizer/export', 'Bearer correct-key', ['id' => $this->entryId]);
+        $document = $exportResponse->data[0];
+        $document[self::SEOMATIC_HANDLE]['seoTitle'] = 'Optimised SEO title';
+
+        $response = $this->runAction(
+            'rankroute/optimizer/import',
+            'Bearer correct-key',
+            rawBody: json_encode([$document]),
+        );
+
+        self::assertSame(true, $response->data['success']);
+        self::assertContains(self::SEOMATIC_HANDLE, $response->data['updatedFields']);
+
+        $draft = Entry::find()->draftId($response->data['draftId'])->siteId($this->primarySiteId)->one();
+        self::assertNotNull($draft);
+        self::assertSame('Optimised SEO title', $draft->getFieldValue(self::SEOMATIC_HANDLE)->metaGlobalVars->seoTitle);
+    }
+
+    /**
      * ADR 0002: the legacy alias must produce the same document as the new path. One
      * assertion is enough — the dispatch itself is covered by ActionDispatchTest.
      */

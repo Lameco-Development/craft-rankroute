@@ -8,8 +8,13 @@ use craft\helpers\Db;
 use craft\helpers\Session;
 use craft\migrations\Install as CraftInstall;
 use craft\models\Site;
+use FilesystemIterator;
 use lameco\rankroute\Plugin;
+use PDO;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use RuntimeException;
+use SplFileInfo;
 use Throwable;
 use yii\base\Event;
 use yii\caching\ArrayCache;
@@ -28,6 +33,7 @@ final class CraftHarness
 {
     /** @var array<string, mixed>|null */
     private static ?array $appConfig = null;
+    private static bool $bootstrapped = false;
     private static bool $installed = false;
 
     /**
@@ -65,20 +71,43 @@ final class CraftHarness
         self::applyEnvDefaults($testsDir);
         self::guardDatabaseName();
 
-        foreach (['/_craft/storage', '/_craft/templates'] as $dir) {
-            if (!is_dir($testsDir . $dir)) {
-                mkdir($testsDir . $dir, 0775, true);
-            }
+        // Storage is wiped, not just created. Installing a plugin writes it into the
+        // persisted project config under storage/config-deltas, which outlives the process
+        // (storage is gitignored but not cleaned). On the next run installSchema() drops
+        // every table and Craft then replays that config during install, so SEOmatic boots
+        // and queries seomatic_metabundles before its own migration has created it. CI never
+        // sees this because a fresh checkout has no storage; locally it fails every other run.
+        self::resetDirectory($testsDir . '/_craft/storage');
+
+        if (!is_dir($testsDir . '/_craft/templates')) {
+            mkdir($testsDir . '/_craft/templates', 0775, true);
         }
 
         // No Yii error handler: PHPUnit must keep owning the process's error handling, or
         // every test that boots Craft is flagged risky for swapping the global handlers.
         defined('YII_ENABLE_ERROR_HANDLER') || define('YII_ENABLE_ERROR_HANDLER', false);
 
-        require dirname(__DIR__, 2) . '/vendor/craftcms/cms/bootstrap/console.php';
+        // Dropped before Craft boots, not inside installSchema(). A previous run leaves
+        // seomatic in the plugins table; the first boot would load it and register its
+        // class-level Event handlers, which are global and survive every later freshApp().
+        // Dropping the schema afterwards leaves those handlers live, and they then query
+        // seomatic_metabundles during the next install, before its migration recreates it.
+        // With an empty database here, no plugin is ever loaded from stale state.
+        self::dropAllTables();
 
-        if (self::$appConfig === null) {
-            throw new RuntimeException('Craft booted without calling craft_modify_app_config() — is tests/bootstrap.php the PHPUnit bootstrap?');
+        // Craft's bootstrap requires Yii.php unconditionally, with no include-once guard. If
+        // installSchema() below throws, $installed stays false and the next test's setUp()
+        // calls back in here — a second require then fatals with "Cannot redeclare class Yii"
+        // and takes the process down, hiding the original failure. Tracking the require
+        // separately from the install keeps that first error readable.
+        if (!self::$bootstrapped) {
+            require dirname(__DIR__, 2) . '/vendor/craftcms/cms/bootstrap/console.php';
+
+            if (self::$appConfig === null) {
+                throw new RuntimeException('Craft booted without calling craft_modify_app_config() — is tests/bootstrap.php the PHPUnit bootstrap?');
+            }
+
+            self::$bootstrapped = true;
         }
 
         self::installSchema();
@@ -166,18 +195,37 @@ final class CraftHarness
         return $plugin;
     }
 
+    /**
+     * Drop every table with a plain PDO connection, before any Craft class is loaded.
+     * MySQL-only on purpose: the suite targets the MySQL service container CI runs.
+     */
+    private static function dropAllTables(): void
+    {
+        $dsn = sprintf(
+            'mysql:host=%s;port=%s;dbname=%s',
+            App::env('CRAFT_DB_SERVER'),
+            App::env('CRAFT_DB_PORT'),
+            App::env('CRAFT_DB_DATABASE'),
+        );
+
+        $pdo = new PDO($dsn, App::env('CRAFT_DB_USER'), App::env('CRAFT_DB_PASSWORD'), [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        ]);
+
+        $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+
+        $tables = $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
+
+        foreach ($tables as $table) {
+            $pdo->exec(sprintf('DROP TABLE IF EXISTS `%s`', $table));
+        }
+
+        $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+    }
+
     private static function installSchema(): void
     {
         $db = Craft::$app->getDb();
-
-        // MySQL-only on purpose: the suite targets the MySQL service container CI runs.
-        $db->createCommand('SET FOREIGN_KEY_CHECKS = 0')->execute();
-
-        foreach ($db->getSchema()->getTableNames() as $table) {
-            $db->createCommand()->dropTable($table)->execute();
-        }
-
-        $db->createCommand('SET FOREIGN_KEY_CHECKS = 1')->execute();
 
         $migration = new CraftInstall([
             'db' => $db,
@@ -202,12 +250,45 @@ final class CraftHarness
             throw new RuntimeException('Could not install the rankroute plugin into the test schema.');
         }
 
+        // SEOmatic is installed here, before this plugin's own init() runs again (via the
+        // freshApp() below), because Plugin::init() only registers the SEOmatic field
+        // handler when the seomatic plugin is already installed and enabled.
+        if (!Craft::$app->getPlugins()->installPlugin('seomatic')) {
+            throw new RuntimeException('Could not install the seomatic plugin into the test schema.');
+        }
+
         // Craft only persists project config changes when a request ends, and nothing here
         // ever ends a request — without this flush the plugin would evaporate with the app
         // instance that installed it.
         Craft::$app->getProjectConfig()->saveModifiedConfigData();
 
         self::freshApp();
+    }
+
+    /**
+     * Delete a directory's contents and leave it empty, creating it when absent.
+     */
+    private static function resetDirectory(string $path): void
+    {
+        if (is_dir($path)) {
+            $entries = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS),
+                RecursiveIteratorIterator::CHILD_FIRST,
+            );
+
+            foreach ($entries as $entry) {
+                /** @var SplFileInfo $entry */
+                if ($entry->isDir()) {
+                    rmdir($entry->getPathname());
+                } else {
+                    unlink($entry->getPathname());
+                }
+            }
+
+            return;
+        }
+
+        mkdir($path, 0775, true);
     }
 
     /**

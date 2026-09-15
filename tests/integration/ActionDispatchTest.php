@@ -118,21 +118,32 @@ final class ActionDispatchTest extends IntegrationTestCase
         }
     }
 
+    /**
+     * Bulk meta import is implemented as of issue #3 (business behaviour lives in
+     * SeoBulkImportTest); here only dispatch is under test, so an empty body is enough to
+     * prove the legacy path reaches the real action instead of the stub.
+     */
     public function testLegacySeoImportDispatchesThroughToSeoImport(): void
     {
         $this->setApiKey('correct-key');
 
-        $response = $this->runAction('_craft-seo-import/api/import', 'Bearer correct-key');
-
-        self::assertSame(501, $response->getStatusCode());
+        try {
+            $this->runAction('_craft-seo-import/api/import', 'Bearer correct-key', rawBody: '');
+            self::fail('Expected a BadRequestHttpException.');
+        } catch (BadRequestHttpException $e) {
+            self::assertSame('No JSON data provided in request body.', $e->getMessage());
+        }
     }
 
     public function testNewSeoImportDispatchesThroughToSeoImport(): void
     {
         $this->setApiKey('correct-key');
 
-        $response = $this->runAction('rankroute/seo/import', 'Bearer correct-key');
-
-        self::assertSame(501, $response->getStatusCode());
+        try {
+            $this->runAction('rankroute/seo/import', 'Bearer correct-key', rawBody: '');
+            self::fail('Expected a BadRequestHttpException.');
+        } catch (BadRequestHttpException $e) {
+            self::assertSame('No JSON data provided in request body.', $e->getMessage());
+        }
     }
 }
