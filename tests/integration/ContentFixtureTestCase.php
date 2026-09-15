@@ -3,6 +3,7 @@
 namespace lameco\rankroute\tests\integration;
 
 use Craft;
+use craft\base\Field;
 use craft\elements\Category;
 use craft\elements\Entry;
 use craft\fieldlayoutelements\CustomField;
@@ -17,6 +18,7 @@ use craft\models\FieldLayout;
 use craft\models\Section;
 use craft\models\Section_SiteSettings;
 use craft\models\Site;
+use nystudio107\seomatic\fields\SeoSettings;
 use RuntimeException;
 
 /**
@@ -41,6 +43,7 @@ abstract class ContentFixtureTestCase extends IntegrationTestCase
     protected const DROPDOWN_HANDLE = 'topic';
     protected const MATRIX_HANDLE = 'blocks';
     protected const BLOCK_PLAIN_TEXT_HANDLE = 'blockText';
+    protected const SEOMATIC_HANDLE = 'seoSettings';
 
     protected function seedContent(): void
     {
@@ -48,7 +51,7 @@ abstract class ContentFixtureTestCase extends IntegrationTestCase
         $this->primarySiteId = $primarySite->id;
         $this->nlSiteId = $this->createNlSite($primarySite);
 
-        [$plainText, $dropdown, $matrix] = $this->createFields();
+        [$plainText, $dropdown, $matrix, $seoSettings] = $this->createFields();
 
         $entryType = new EntryType(['name' => 'Article', 'handle' => 'article']);
         $layout = new FieldLayout(['type' => Entry::class]);
@@ -60,6 +63,7 @@ abstract class ContentFixtureTestCase extends IntegrationTestCase
                     new CustomField($plainText),
                     new CustomField($dropdown),
                     new CustomField($matrix),
+                    new CustomField($seoSettings),
                 ],
             ],
         ]);
@@ -111,10 +115,21 @@ abstract class ContentFixtureTestCase extends IntegrationTestCase
         $this->entrySlug = $entry->slug;
         $this->entryUri = 'blog/' . $entry->slug;
 
+        $categoryGroupLayout = new FieldLayout(['type' => Category::class]);
+        $categoryGroupLayout->setTabs([
+            [
+                'name' => 'Content',
+                'elements' => [
+                    new CustomField($seoSettings),
+                ],
+            ],
+        ]);
+
         $categoryGroup = new CategoryGroup([
             'name' => 'Topics',
             'handle' => 'topics',
         ]);
+        $categoryGroup->setFieldLayout($categoryGroupLayout);
         $categoryGroup->setSiteSettings([
             new CategoryGroup_SiteSettings([
                 'siteId' => $this->primarySiteId,
@@ -166,7 +181,7 @@ abstract class ContentFixtureTestCase extends IntegrationTestCase
     }
 
     /**
-     * @return array{0: PlainText, 1: Dropdown, 2: Matrix}
+     * @return array{0: PlainText, 1: Dropdown, 2: Matrix, 3: SeoSettings}
      */
     private function createFields(): array
     {
@@ -217,6 +232,17 @@ abstract class ContentFixtureTestCase extends IntegrationTestCase
             throw new RuntimeException('Could not save the Matrix field: ' . implode(', ', $matrix->getErrorSummary(true)));
         }
 
-        return [$plainText, $dropdown, $matrix];
+        // Per-site, like the fixture's other multi-site content, so the /nl/ resolution
+        // case (D7) writes to the nl site's element without touching the primary one.
+        $seoSettings = new SeoSettings([
+            'name' => 'SEO Settings',
+            'handle' => self::SEOMATIC_HANDLE,
+            'translationMethod' => Field::TRANSLATION_METHOD_SITE,
+        ]);
+        if (!$fieldsService->saveField($seoSettings)) {
+            throw new RuntimeException('Could not save the SeoSettings field: ' . implode(', ', $seoSettings->getErrorSummary(true)));
+        }
+
+        return [$plainText, $dropdown, $matrix, $seoSettings];
     }
 }

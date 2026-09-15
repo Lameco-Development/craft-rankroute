@@ -202,6 +202,13 @@ final class CraftHarness
             throw new RuntimeException('Could not install the rankroute plugin into the test schema.');
         }
 
+        // SEOmatic is installed here, before this plugin's own init() runs again (via the
+        // freshApp() below), because Plugin::init() only registers the SEOmatic field
+        // handler when the seomatic plugin is already installed and enabled.
+        if (!Craft::$app->getPlugins()->installPlugin('seomatic')) {
+            throw new RuntimeException('Could not install the seomatic plugin into the test schema.');
+        }
+
         // Craft only persists project config changes when a request ends, and nothing here
         // ever ends a request — without this flush the plugin would evaporate with the app
         // instance that installed it.

@@ -3,11 +3,14 @@
 namespace lameco\rankroute\controllers;
 
 use craft\web\Controller;
+use lameco\rankroute\Plugin;
+use yii\web\BadRequestHttpException;
 use yii\web\Response;
 
 /**
  * `rankroute/seo/import`, also reachable as the legacy `_craft-seo-import/api/import`
- * (ADR 0002). Bulk meta write lands in issue #3; here it only answers 501.
+ * (ADR 0002). Bulk-writes SEOmatic meta title/description onto the live element,
+ * addressed by URL (CONTEXT.md — Bulk meta flow); nothing is drafted or reviewed.
  */
 class SeoController extends Controller
 {
@@ -36,8 +39,26 @@ class SeoController extends Controller
         return true;
     }
 
+    /**
+     * Accepts the raw JSON body as bulk meta items (CONTEXT.md — Bulk meta item), writes
+     * SEOmatic's `seoTitle`/`seoDescription` onto the live element found for each `url`.
+     */
     public function actionImport(): Response
     {
-        return $this->notImplemented();
+        $this->requirePostRequest();
+
+        $json = $this->request->getRawBody();
+
+        $seoBulkService = Plugin::getInstance()->seoBulkService;
+
+        $items = $seoBulkService->normalizeItems($json);
+
+        if (!$seoBulkService->seomaticInstalled()) {
+            throw new BadRequestHttpException('SEOmatic is not installed');
+        }
+
+        $result = $seoBulkService->import($items);
+
+        return $this->asJson($result->toArray());
     }
 }
