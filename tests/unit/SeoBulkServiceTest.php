@@ -84,4 +84,17 @@ final class SeoBulkServiceTest extends TestCase
 
         $this->service()->normalizeItems(json_encode(['results' => 'not-an-array']));
     }
+
+    /**
+     * A single item sent unwrapped is a JSON object, not a list. Iterating it would walk its
+     * *values* and report one 'No url provided' skip per value with a 200, so the caller sees
+     * success for a payload nothing was written from. craft-seo-import 1.0.4 answered 400.
+     */
+    public function testABareItemObjectIsABadRequest(): void
+    {
+        $this->expectException(BadRequestHttpException::class);
+        $this->expectExceptionMessage('No results found in JSON data.');
+
+        $this->service()->normalizeItems(json_encode(['url' => '/blog/one', 'meta_title' => 'T']));
+    }
 }

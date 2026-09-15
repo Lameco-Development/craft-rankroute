@@ -46,7 +46,9 @@ class SeoBulkService extends Component
             $items = $data;
         }
 
-        if (!is_array($items) || empty($items)) {
+        // array_is_list rejects a bare item object: iterating that would walk its values and
+        // answer 200 with a skip per value, reporting success for a write that never happened.
+        if (!is_array($items) || empty($items) || !array_is_list($items)) {
             throw new BadRequestHttpException('No results found in JSON data.');
         }
 
