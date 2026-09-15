@@ -15,7 +15,7 @@ use yii\web\UnauthorizedHttpException;
  * `SeoController` each call `requireApiKey()` from their own `beforeAction()`, so a
  * single route can pass while the other controller's check has been deleted entirely.
  */
-final class ApiKeyAuthTest extends IntegrationTestCase
+final class ApiKeyAuthTest extends ContentFixtureTestCase
 {
     /**
      * @return array<string, array{0: string}>
@@ -72,17 +72,17 @@ final class ApiKeyAuthTest extends IntegrationTestCase
     }
 
     /**
-     * The right key gets past the gate: not implemented until issue #2, but that's a 501
-     * from the action itself, not a 401 from the auth check.
+     * The right key gets past the gate: export is implemented as of issue #2, so a valid
+     * element id now reaches a real 200, not a 401 from the auth check.
      */
     public function testProtectedActionAcceptsTheCorrectKey(): void
     {
+        $this->seedContent();
         $this->setApiKey('correct-key');
 
-        $response = $this->runAction('rankroute/optimizer/export', 'Bearer correct-key');
+        $response = $this->runAction('rankroute/optimizer/export', 'Bearer correct-key', ['id' => $this->entryId]);
 
-        self::assertSame(501, $response->getStatusCode());
-        self::assertSame(['success' => false, 'message' => 'Not implemented until 0.0.1'], $response->data);
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[DataProvider('protectedRouteProvider')]

@@ -6,8 +6,16 @@ use Craft;
 use craft\base\Plugin as BasePlugin;
 use lameco\rankroute\controllers\OptimizerController;
 use lameco\rankroute\controllers\SeoController;
+use lameco\rankroute\services\ElementResolver;
 use lameco\rankroute\services\ExportService;
 use lameco\rankroute\services\FieldHandlerRegistry;
+use lameco\rankroute\services\fieldhandlers\AssetFieldHandler;
+use lameco\rankroute\services\fieldhandlers\DefaultFieldHandler;
+use lameco\rankroute\services\fieldhandlers\DropdownFieldHandler;
+use lameco\rankroute\services\fieldhandlers\LinkFieldHandler;
+use lameco\rankroute\services\fieldhandlers\MatrixFieldHandler;
+use lameco\rankroute\services\fieldhandlers\RelationFieldHandler;
+use lameco\rankroute\services\fieldhandlers\SeomaticFieldHandler;
 use lameco\rankroute\services\ImportService;
 use lameco\rankroute\services\SeoBulkService;
 
@@ -20,6 +28,7 @@ use lameco\rankroute\services\SeoBulkService;
  * @property-read ExportService $exportService
  * @property-read ImportService $importService
  * @property-read SeoBulkService $seoBulkService
+ * @property-read ElementResolver $elementResolver
  */
 class Plugin extends BasePlugin
 {
@@ -33,6 +42,7 @@ class Plugin extends BasePlugin
                 'exportService' => ['class' => ExportService::class],
                 'importService' => ['class' => ImportService::class],
                 'seoBulkService' => ['class' => SeoBulkService::class],
+                'elementResolver' => ['class' => ElementResolver::class],
             ],
         ];
     }
@@ -49,5 +59,27 @@ class Plugin extends BasePlugin
             'optimized-entry' => OptimizerController::class,
             'api' => SeoController::class,
         ];
+
+        // Registration order is load-bearing: specialised handlers first, Default last
+        // (craft-entry-optimizer 1.0.7, Plugin::init()).
+        $handlers = [
+            new MatrixFieldHandler(),
+            new AssetFieldHandler(),
+            new RelationFieldHandler(),
+            new LinkFieldHandler(),
+            new DropdownFieldHandler(),
+        ];
+
+        // Conditionally register SEOmatic handler if plugin is installed
+        $pluginsService = Craft::$app->getPlugins();
+        if ($pluginsService->isPluginInstalled('seomatic') && $pluginsService->isPluginEnabled('seomatic')) {
+            $handlers[] = new SeomaticFieldHandler();
+            Craft::info('SEOmatic plugin detected - registered SEOmatic field handler', __METHOD__);
+        }
+
+        // Default handler should always be last (lowest priority)
+        $handlers[] = new DefaultFieldHandler();
+
+        $this->fieldHandlerRegistry->registerMultiple($handlers);
     }
 }
