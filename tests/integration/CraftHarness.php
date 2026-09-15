@@ -266,10 +266,6 @@ final class CraftHarness
     }
 
     /**
-     * Minimal KEY=VALUE loader so the harness needs no dotenv dependency. Existing
-     * environment variables win, which is how CI overrides the local file.
-     */
-    /**
      * Delete a directory's contents and leave it empty, creating it when absent.
      */
     private static function resetDirectory(string $path): void
@@ -295,6 +291,10 @@ final class CraftHarness
         mkdir($path, 0775, true);
     }
 
+    /**
+     * Minimal KEY=VALUE loader so the harness needs no dotenv dependency. Existing
+     * environment variables win, which is how CI overrides the local file.
+     */
     private static function loadEnvFile(string $path): void
     {
         if (!is_file($path)) {
