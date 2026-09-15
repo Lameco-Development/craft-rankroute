@@ -92,7 +92,7 @@ final class ActionDispatchTest extends IntegrationTestCase
      * Export/import are implemented as of issue #2 (business behaviour lives in
      * OptimizerExportImportTest, including the legacy-vs-new document parity check); here
      * only dispatch is under test, so no request body is required to prove the legacy path
-     * reached the real action instead of the stub.
+     * reached the real action.
      */
     public function testLegacyExportDispatchesThroughToOptimizerExport(): void
     {
@@ -121,7 +121,7 @@ final class ActionDispatchTest extends IntegrationTestCase
     /**
      * Bulk meta import is implemented as of issue #3 (business behaviour lives in
      * SeoBulkImportTest); here only dispatch is under test, so an empty body is enough to
-     * prove the legacy path reaches the real action instead of the stub.
+     * prove the legacy path reaches the real action.
      */
     public function testLegacySeoImportDispatchesThroughToSeoImport(): void
     {
