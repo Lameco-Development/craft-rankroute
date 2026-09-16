@@ -5,6 +5,7 @@ namespace lameco\rankroute\tests\integration;
 use Craft;
 use lameco\rankroute\controllers\OptimizerController;
 use lameco\rankroute\controllers\SeoController;
+use lameco\rankroute\controllers\TextController;
 use PHPUnit\Framework\Attributes\DataProvider;
 use yii\web\BadRequestHttpException;
 
@@ -26,6 +27,9 @@ final class ActionDispatchTest extends IntegrationTestCase
             'new optimizer export' => ['rankroute/optimizer/export', OptimizerController::class, 'export'],
             'new optimizer import' => ['rankroute/optimizer/import', OptimizerController::class, 'import'],
             'new seo import' => ['rankroute/seo/import', SeoController::class, 'import'],
+            'text export' => ['rankroute/text/export', TextController::class, 'export'],
+            'text import' => ['rankroute/text/import', TextController::class, 'import'],
+            'text verify' => ['rankroute/text/verify', TextController::class, 'verify'],
             'legacy optimized-entry (status)' => ['_craft-entry-optimizer/optimized-entry', OptimizerController::class, ''],
             'legacy optimized-entry/export' => ['_craft-entry-optimizer/optimized-entry/export', OptimizerController::class, 'export'],
             'legacy optimized-entry/import' => ['_craft-entry-optimizer/optimized-entry/import', OptimizerController::class, 'import'],
@@ -84,6 +88,9 @@ final class ActionDispatchTest extends IntegrationTestCase
                 'export' => 'rankroute/optimizer/export',
                 'import' => 'rankroute/optimizer/import',
                 'seoImport' => 'rankroute/seo/import',
+                'textExport' => 'rankroute/text/export',
+                'textImport' => 'rankroute/text/import',
+                'textVerify' => 'rankroute/text/verify',
             ],
         ], $data);
     }

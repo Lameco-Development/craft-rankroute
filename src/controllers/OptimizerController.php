@@ -57,6 +57,9 @@ class OptimizerController extends Controller
                 'export' => 'rankroute/optimizer/export',
                 'import' => 'rankroute/optimizer/import',
                 'seoImport' => 'rankroute/seo/import',
+                'textExport' => 'rankroute/text/export',
+                'textImport' => 'rankroute/text/import',
+                'textVerify' => 'rankroute/text/verify',
             ],
         ]);
     }

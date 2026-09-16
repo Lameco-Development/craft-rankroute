@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Stack
 
-Craft CMS 5 plugin, PHP 8.2+ (Composer platform pinned to 8.4). Handle `rankroute`, package `lameco/craft-rankroute`, namespace `lameco\rankroute`. No frontend build, no Twig — the plugin is an HTTP API for the RankRoute n8n flows.
+Craft CMS 5 plugin, PHP 8.2+ (Composer platform pinned to 8.4). Handle `rankroute`, package `lameco/craft-rankroute`, namespace `lameco\rankroute`. No frontend build, no Twig — the plugin is an HTTP API for the RankRoute n8n flows and the RankRoute backend.
 
 ## Commands
 
@@ -35,8 +35,12 @@ One plugin replacing two: `lameco/craft-entry-optimizer` (export an element to J
 - `services/ExportService`, `services/ImportService`, `services/FieldHandlerRegistry`, `services/fieldhandlers/*` — carried over from entry-optimizer
 - `services/SeoBulkService` — carried over from seo-import's controller
 - `dto/*` — readonly result objects with `toArray()`
+- `controllers/TextController`: `export`, `import`, `verify` (the text flow, ADR 0003)
+- `services/TextExportService`, `services/TextImportService`: text items out; validated strings into a draft via Craft's delta Matrix format, then the structure check
+- `services/text/*`: `TextExtractor` (element → text items, `config/rankroute.php` excludes), `TextAddress`, `HtmlSkeleton`, `TextImportValidator`, `StructureSnapshot`, `StructureCheck`, `Fingerprint`, `SmokeRewrite`
+- `console/controllers/TextFlowController`: `rankroute/text-flow/smoke`, the per-site gate before the text flow is enabled
 
-Legacy action paths (`/actions/_craft-entry-optimizer/optimized-entry/*`, `/actions/_craft-seo-import/api/import`) are served by this plugin through the 0.0.x line — see `docs/adr/0002-legacy-action-aliases.md`.
+Legacy action paths (`/actions/_craft-entry-optimizer/optimized-entry/*`, `/actions/_craft-seo-import/api/import`) are served by this plugin through the 0.0.x line, see `docs/adr/0002-legacy-action-aliases.md`. They and the `optimizer/*` endpoints stay unchanged for the n8n flows; the text flow has no legacy alias and its only client is the RankRoute backend (Laravel, separate `rankroute` repo).
 
 ## Auth
 

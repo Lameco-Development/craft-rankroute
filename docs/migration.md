@@ -138,3 +138,36 @@ the "old plugins" column records the expectation, not a verified inventory.
 
 **0.1.0 is blocked until every row is complete.** That release removes the legacy aliases,
 and any flow still pointing at an old path breaks the moment it ships.
+
+## Before switching a site to the text flow
+
+The text flow (ADR 0003) is a separate step from the plugin swap above. The n8n flows keep
+using the optimizer endpoints until the site is switched; the RankRoute backend is the only
+client of the text endpoints. Per site, in order:
+
+1. **Install a RankRoute release that contains the text flow.** Check with
+   `curl -s https://<site>/actions/rankroute/optimizer/status`: `endpoints` must list
+   `textExport`, `textImport` and `textVerify`.
+2. **Set `RANKROUTE_API_KEY`** (step 2 above), if the site does not have it yet.
+3. **Review `config/rankroute.php`.** The defaults exclude `*url`, `*webhook*`, `importId`,
+   `*Id`, `llmContent`, `cocNumber` and nested entries of type `*button*`. Add the site's
+   own non-content text fields and button-like entry types before the smoke run.
+   On a multi-site install, check that content text fields are translatable per site: the
+   text flow only checks the target site, and a shared value changes every site when the
+   draft is applied (ADR 0003, Limits).
+4. **Run the smoke command** on the site's server:
+
+   ```bash
+   php craft rankroute/text-flow/smoke --sample=5
+   ```
+
+   It calls the site over HTTP; pass `--base-url` when the server cannot reach its public
+   host. It creates a draft per element and deletes it again, except the sampled ones.
+5. **Require zero failures** (exit code `0`). Rerun a failing element with
+   `--uri=<uri> --verbose` to see the response or the structure differences. Fix the cause
+   (usually an exclude pattern) and run the full command again. Do not switch a site with
+   any failure left.
+6. **Check the sampled drafts in a browser** against the live page: buttons, links, forms
+   and images must be identical. Delete the sampled drafts afterwards.
+7. **Point the RankRoute backend at the site** with its base URL and key, and turn off the
+   site's n8n optimizer flow so the two clients do not both write drafts.

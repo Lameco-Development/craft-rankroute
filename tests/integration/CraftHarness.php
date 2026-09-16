@@ -257,6 +257,12 @@ final class CraftHarness
             throw new RuntimeException('Could not install the seomatic plugin into the test schema.');
         }
 
+        // CKEditor is a dev dependency only: the text flow detects its field class by name,
+        // and the text-flow fixture needs real CKEditor fields to prove HTML handling.
+        if (!Craft::$app->getPlugins()->installPlugin('ckeditor')) {
+            throw new RuntimeException('Could not install the ckeditor plugin into the test schema.');
+        }
+
         // Craft only persists project config changes when a request ends, and nothing here
         // ever ends a request — without this flush the plugin would evaporate with the app
         // instance that installed it.

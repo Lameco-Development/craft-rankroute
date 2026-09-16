@@ -4,6 +4,7 @@ namespace lameco\rankroute;
 
 use Craft;
 use craft\base\Plugin as BasePlugin;
+use craft\console\Application as ConsoleApplication;
 use lameco\rankroute\controllers\OptimizerController;
 use lameco\rankroute\controllers\SeoController;
 use lameco\rankroute\services\ElementResolver;
@@ -18,6 +19,12 @@ use lameco\rankroute\services\fieldhandlers\RelationFieldHandler;
 use lameco\rankroute\services\fieldhandlers\SeomaticFieldHandler;
 use lameco\rankroute\services\ImportService;
 use lameco\rankroute\services\SeoBulkService;
+use lameco\rankroute\services\text\Fingerprint;
+use lameco\rankroute\services\text\StructureCheck;
+use lameco\rankroute\services\text\StructureSnapshot;
+use lameco\rankroute\services\text\TextExtractor;
+use lameco\rankroute\services\TextExportService;
+use lameco\rankroute\services\TextImportService;
 
 /**
  * RankRoute connector: element export/import for AI content optimisation and bulk SEO
@@ -29,6 +36,12 @@ use lameco\rankroute\services\SeoBulkService;
  * @property-read ImportService $importService
  * @property-read SeoBulkService $seoBulkService
  * @property-read ElementResolver $elementResolver
+ * @property-read TextExtractor $textExtractor
+ * @property-read StructureSnapshot $structureSnapshot
+ * @property-read StructureCheck $structureCheck
+ * @property-read Fingerprint $textFingerprint
+ * @property-read TextExportService $textExportService
+ * @property-read TextImportService $textImportService
  */
 class Plugin extends BasePlugin
 {
@@ -43,6 +56,12 @@ class Plugin extends BasePlugin
                 'importService' => ['class' => ImportService::class],
                 'seoBulkService' => ['class' => SeoBulkService::class],
                 'elementResolver' => ['class' => ElementResolver::class],
+                'textExtractor' => ['class' => TextExtractor::class],
+                'structureSnapshot' => ['class' => StructureSnapshot::class],
+                'structureCheck' => ['class' => StructureCheck::class],
+                'textFingerprint' => ['class' => Fingerprint::class],
+                'textExportService' => ['class' => TextExportService::class],
+                'textImportService' => ['class' => TextImportService::class],
             ],
         ];
     }
@@ -50,6 +69,10 @@ class Plugin extends BasePlugin
     public function init(): void
     {
         parent::init();
+
+        if (Craft::$app instanceof ConsoleApplication) {
+            $this->controllerNamespace = 'lameco\\rankroute\\console\\controllers';
+        }
 
         // Legacy action paths from craft-entry-optimizer and craft-seo-import keep
         // dispatching through this plugin until each site's n8n flows migrate (ADR 0002).
