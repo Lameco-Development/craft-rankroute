@@ -31,7 +31,7 @@ One plugin replacing two: `lameco/craft-entry-optimizer` (export an element to J
 
 - `controllers/OptimizerController` — `export`, `import`, `status`
 - `controllers/SeoController` — `import` (bulk meta)
-- `services/ElementResolver` — URL or path → `{siteId, uri}` by longest site base-path prefix, then `Elements::getElementByUri()`
+- `services/ElementResolver` — URL or path → `{siteId, uri}`: a full URL only matches sites on its host, then longest site base-path prefix, then `Elements::getElementByUri()`
 - `services/ExportService`, `services/ImportService`, `services/FieldHandlerRegistry`, `services/fieldhandlers/*` — carried over from entry-optimizer
 - `services/SeoBulkService` — carried over from seo-import's controller
 - `dto/*` — readonly result objects with `toArray()`

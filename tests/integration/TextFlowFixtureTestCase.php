@@ -3,6 +3,7 @@
 namespace lameco\rankroute\tests\integration;
 
 use Craft;
+use craft\base\ElementInterface;
 use craft\base\Field;
 use craft\base\FieldInterface;
 use craft\ckeditor\Field as CkeditorField;
@@ -65,11 +66,26 @@ abstract class TextFlowFixtureTestCase extends IntegrationTestCase
     /** @var array<string, FieldInterface> */
     protected array $fields = [];
 
+    /**
+     * Extra sites the page is propagated to, by handle: `[handle => [name, language, baseUrl]]`.
+     * Set before {@see seedTextFlowContent()}; their ids end up in {@see $extraSiteIds}.
+     *
+     * @var array<string, array{0: string, 1: string, 2: string}>
+     */
+    protected array $extraSites = [];
+
+    /** @var array<string, int> */
+    protected array $extraSiteIds = [];
+
     protected function seedTextFlowContent(): void
     {
         $primarySite = Craft::$app->getSites()->getPrimarySite();
         $this->primarySiteId = $primarySite->id;
-        $this->nlSiteId = $this->createNlSite($primarySite);
+        $this->nlSiteId = $this->createSite($primarySite, 'nl', 'RankRoute NL', 'nl-NL', 'https://rankroute.test/nl/');
+
+        foreach ($this->extraSites as $handle => [$name, $language, $baseUrl]) {
+            $this->extraSiteIds[$handle] = $this->createSite($primarySite, $handle, $name, $language, $baseUrl);
+        }
 
         [$this->assetId, $this->otherAssetId] = $this->createAssets();
         $this->createFields();
@@ -99,10 +115,10 @@ abstract class TextFlowFixtureTestCase extends IntegrationTestCase
             'type' => Section::TYPE_STRUCTURE,
         ]);
         $section->setEntryTypes([$pageType]);
-        $section->setSiteSettings([
-            new Section_SiteSettings(['siteId' => $this->primarySiteId, 'hasUrls' => true, 'uriFormat' => '{parent.uri}/{slug}']),
-            new Section_SiteSettings(['siteId' => $this->nlSiteId, 'hasUrls' => true, 'uriFormat' => '{parent.uri}/{slug}']),
-        ]);
+        $section->setSiteSettings(array_map(
+            fn(int $siteId) => new Section_SiteSettings(['siteId' => $siteId, 'hasUrls' => true, 'uriFormat' => '{parent.uri}/{slug}']),
+            [$this->primarySiteId, $this->nlSiteId, ...array_values($this->extraSiteIds)],
+        ));
 
         if (!Craft::$app->getEntries()->saveSection($section)) {
             throw new RuntimeException('Could not save the "pages" section: ' . implode(', ', $section->getErrorSummary(true)));
@@ -327,23 +343,65 @@ abstract class TextFlowFixtureTestCase extends IntegrationTestCase
         return $current;
     }
 
-    private function createNlSite(Site $primarySite): int
+    /**
+     * Every stored value of an element tree as `address => value`: titles, custom field
+     * values as serialised for the database, and per nested entry its canonical id, type
+     * and status, addressed like text items.
+     *
+     * @return array<string, mixed>
+     */
+    protected function flatten(ElementInterface $element, string $prefix = ''): array
     {
-        $nlSite = new Site([
+        $flat = [];
+        $flat[$prefix . 'title'] = $element->title;
+
+        foreach ($element->getFieldLayout()->getCustomFields() as $field) {
+            if ($field instanceof Matrix) {
+                $entries = Entry::find()->fieldId($field->id)->ownerId($element->id)->siteId($element->siteId)->status(null)->all();
+                $flat[$prefix . $field->handle . '#count'] = count($entries);
+
+                foreach ($entries as $index => $entry) {
+                    $entryPrefix = "{$prefix}{$field->handle}[{$index}].";
+                    $flat[$entryPrefix . '#canonicalId'] = $entry->getCanonicalId();
+                    $flat[$entryPrefix . '#type'] = $entry->getType()->handle;
+                    $flat[$entryPrefix . '#enabled'] = $entry->enabled;
+                    $flat += $this->flatten($entry, $entryPrefix);
+                }
+
+                continue;
+            }
+
+            if ($field->handle === 'seo') {
+                $bundle = $element->getFieldValue('seo');
+                $flat[$prefix . 'seo.seoTitle'] = $bundle->metaGlobalVars->seoTitle;
+                $flat[$prefix . 'seo.seoDescription'] = $bundle->metaGlobalVars->seoDescription;
+                $flat[$prefix . 'seo.metaBundleSettings'] = json_encode($bundle->metaBundleSettings);
+                continue;
+            }
+
+            $flat[$prefix . $field->handle] = json_encode($field->serializeValueForDb($element->getFieldValue($field->handle), $element));
+        }
+
+        return $flat;
+    }
+
+    private function createSite(Site $primarySite, string $handle, string $name, string $language, string $baseUrl): int
+    {
+        $site = new Site([
             'groupId' => $primarySite->groupId,
-            'name' => 'RankRoute NL',
-            'handle' => 'nl',
-            'language' => 'nl-NL',
+            'name' => $name,
+            'handle' => $handle,
+            'language' => $language,
             'hasUrls' => true,
-            'baseUrl' => 'https://rankroute.test/nl/',
+            'baseUrl' => $baseUrl,
             'primary' => false,
         ]);
 
-        if (!Craft::$app->getSites()->saveSite($nlSite)) {
-            throw new RuntimeException('Could not save the "nl" site: ' . implode(', ', $nlSite->getErrorSummary(true)));
+        if (!Craft::$app->getSites()->saveSite($site)) {
+            throw new RuntimeException("Could not save the \"{$handle}\" site: " . implode(', ', $site->getErrorSummary(true)));
         }
 
-        return $nlSite->id;
+        return $site->id;
     }
 
     /**

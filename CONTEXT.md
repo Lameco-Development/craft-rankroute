@@ -49,7 +49,9 @@ with a site's base-path prefix (`nl/projecten`).
 
 **Site base path**:
 The path component of a site's base URL (`/nl/` → `nl`). Longest prefix wins when a path is
-resolved to a site; no match means the primary site.
+resolved to a site; no match means the primary site. A full URL only matches the sites on
+its host (a site on its own domain, `https://example.de/`, is found by host alone); a host
+no site has is ignored.
 
 **Element**:
 Whatever Craft element owns a URI — an entry, a Commerce product, a category. All flows
@@ -76,8 +78,9 @@ handler for nested fields without re-deriving the field layout.
 **Text item**:
 One string of an element the text flow may rewrite: `{id, type, value, maxLength}`. `type`
 is `plain` (PlainText, native title, SEOmatic meta) or `html` (CKEditor, Redactor). Only
-non-empty values that are not a URL, e-mail address or number, contain no Twig, and are not
-excluded by `config/rankroute.php` become items.
+non-empty values that are not a URL, e-mail address or number, contain no Twig, are not
+excluded by `config/rankroute.php` and are not shared with another site of the element
+(a translation key other sites have too) become items.
 _Avoid_: field (an item can be a title or SEO meta), block
 
 **Address**:

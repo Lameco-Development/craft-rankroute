@@ -22,7 +22,8 @@ use Throwable;
  * - text fields as a marker: `{text: "plain"}` or `{text: "html", tags: [...]}`, where
  *   `tags` is the {@see HtmlSkeleton} of the value as Craft would store it (so HTML
  *   Purifier normalisation on save cannot register as a change); text that is not
- *   extractable (empty, URL, Twig, excluded, in a disabled entry) is kept in full;
+ *   extractable (empty, URL, Twig, excluded, shared with another site, in a disabled
+ *   entry) is kept in full;
  * - Matrix fields as the ordered list of nested entries, each by canonical id, so a
  *   draft's derivative nested entry compares equal to the entry it was copied from.
  *
@@ -74,7 +75,9 @@ class StructureSnapshot extends Component
 
         if ($extractor->hasEditableTitle($owner)) {
             $title = (string)$owner->title;
-            $snapshot['title'] = $textAllowed && $extractor->isExtractableValue($title, TextItem::TYPE_PLAIN)
+            $snapshot['title'] = $textAllowed
+                && !$extractor->isTitleSharedWithOtherSites($owner)
+                && $extractor->isExtractableValue($title, TextItem::TYPE_PLAIN)
                 ? ['text' => TextItem::TYPE_PLAIN]
                 : ['value' => $title];
         }
@@ -137,6 +140,7 @@ class StructureSnapshot extends Component
         $extractable = $raw !== null
             && $textAllowed
             && !$extractor->isFieldExcluded($field->handle)
+            && !$extractor->isFieldSharedWithOtherSites($owner, $field)
             && $extractor->isExtractableValue($raw, $type);
 
         if ($type === TextItem::TYPE_PLAIN) {
@@ -169,7 +173,7 @@ class StructureSnapshot extends Component
         // SEO field was never saved, which would make every fingerprint unique.
         unset($serialized['sourceDateUpdated']);
 
-        if (!$textAllowed) {
+        if (!$textAllowed || $extractor->isFieldSharedWithOtherSites($owner, $field)) {
             return $serialized;
         }
 

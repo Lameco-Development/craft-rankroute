@@ -235,7 +235,9 @@ log under that reference.
 `GET /actions/rankroute/text/export?url=<url or path>`
 or `GET /actions/rankroute/text/export?id=<elementId>&siteId=<siteId>`
 
-`url` is resolved like the other flows (longest site base-path prefix). Without `siteId`,
+`url` is resolved like the other flows: a full URL only matches the sites whose base URL has
+its host (so a language on its own domain is found), then the longest site base-path prefix
+wins. Without `siteId`,
 `id` is looked up in the primary site. By `id`, only top-level entries, categories and
 Commerce products are found; a nested entry, asset or any other element id answers `404`.
 
@@ -269,7 +271,10 @@ Commerce products are found; a nested entry, asset or any other element id answe
 A value becomes an item only when it is non-empty, not a URL, e-mail address or number,
 contains no Twig (`{{`, `{%`), is not a plain value that already looks like markup (`<`
 followed by a letter, `/`, `!` or `?`, which could never pass `html_in_plain`), its field
-handle does not match `excludeFields`, and every nested entry on its path is enabled, has
+handle does not match `excludeFields`, its value is not shared with another site of the
+element (translation method "not translatable", or a site group, language or custom key
+another site of the element has too; Craft would write it into every such site), and
+every nested entry on its path is enabled, has
 no type matching `excludeEntryTypes` and belongs to its owner (a nested entry shared from
 another element is left alone). Links,
 assets, relations, options, Lightswitch, Table, forms, Matrix structure, other SEOmatic

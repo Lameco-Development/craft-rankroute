@@ -7,7 +7,6 @@ use craft\base\ElementInterface;
 use craft\db\Table as DbTable;
 use craft\elements\Entry;
 use craft\events\ModelEvent;
-use craft\fields\Matrix;
 use lameco\rankroute\services\text\HtmlSkeleton;
 use yii\base\Event;
 
@@ -767,48 +766,6 @@ final class TextFlowTest extends TextFlowFixtureTestCase
         self::assertSame(200, $response->getStatusCode(), json_encode($response->data));
 
         return $response->data['draftId'];
-    }
-
-    /**
-     * Every stored value of an element tree as `address => value`: titles, custom field
-     * values as serialised for the database, and per nested entry its canonical id, type
-     * and status, addressed like text items.
-     *
-     * @return array<string, mixed>
-     */
-    private function flatten(ElementInterface $element, string $prefix = ''): array
-    {
-        $flat = [];
-        $flat[$prefix . 'title'] = $element->title;
-
-        foreach ($element->getFieldLayout()->getCustomFields() as $field) {
-            if ($field instanceof Matrix) {
-                $entries = Entry::find()->fieldId($field->id)->ownerId($element->id)->siteId($element->siteId)->status(null)->all();
-                $flat[$prefix . $field->handle . '#count'] = count($entries);
-
-                foreach ($entries as $index => $entry) {
-                    $entryPrefix = "{$prefix}{$field->handle}[{$index}].";
-                    $flat[$entryPrefix . '#canonicalId'] = $entry->getCanonicalId();
-                    $flat[$entryPrefix . '#type'] = $entry->getType()->handle;
-                    $flat[$entryPrefix . '#enabled'] = $entry->enabled;
-                    $flat += $this->flatten($entry, $entryPrefix);
-                }
-
-                continue;
-            }
-
-            if ($field->handle === 'seo') {
-                $bundle = $element->getFieldValue('seo');
-                $flat[$prefix . 'seo.seoTitle'] = $bundle->metaGlobalVars->seoTitle;
-                $flat[$prefix . 'seo.seoDescription'] = $bundle->metaGlobalVars->seoDescription;
-                $flat[$prefix . 'seo.metaBundleSettings'] = json_encode($bundle->metaBundleSettings);
-                continue;
-            }
-
-            $flat[$prefix . $field->handle] = json_encode($field->serializeValueForDb($element->getFieldValue($field->handle), $element));
-        }
-
-        return $flat;
     }
 
     /**

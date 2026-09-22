@@ -6,6 +6,8 @@ use Craft;
 use craft\base\Component;
 use craft\base\ElementInterface;
 use craft\base\FieldInterface;
+use craft\db\Query;
+use craft\db\Table;
 use craft\elements\Entry;
 use craft\fields\Matrix;
 use craft\fields\PlainText;
@@ -18,7 +20,8 @@ use Throwable;
  * An item is a PlainText, CKEditor or Redactor field, a native title the editor types
  * (entry type with a title field and no title format) or a literal SEOmatic meta
  * title/description, whose value is non-empty, not a URL/e-mail/number, contains no Twig,
- * is not excluded by `config/rankroute.php` and sits in enabled nested entries only.
+ * is not excluded by `config/rankroute.php`, is not shared with another site of the
+ * element (see {@see isSharedWithOtherSites()}) and sits in enabled nested entries only.
  *
  * CKEditor, Redactor and SEOmatic are detected by class name, so none of them is a runtime
  * dependency.
@@ -48,6 +51,11 @@ class TextExtractor extends Component
      * @internal
      */
     public bool $skipSharedNestedEntries = true;
+
+    /**
+     * @var array<int, list<int>> site ids per canonical element id, see {@see otherSiteIds()}
+     */
+    private array $siteIdsByElement = [];
 
     public function init(): void
     {
@@ -271,12 +279,78 @@ class TextExtractor extends Component
     }
 
     /**
+     * Whether a field value of this element is shared with another site the element exists
+     * in: the field's translation key (translation method "none", or a site group, language
+     * or custom key another site of the element has too) is the same there. Craft
+     * propagates such a value on save, so writing it for one site would write it for every
+     * site sharing it, e.g. Dutch text into the English page. The text flow leaves it alone.
+     */
+    public function isFieldSharedWithOtherSites(ElementInterface $element, FieldInterface $field): bool
+    {
+        return $this->isSharedWithOtherSites($element, fn(ElementInterface $site) => $field->getTranslationKey($site));
+    }
+
+    /**
+     * {@see isFieldSharedWithOtherSites()} for the native title (the entry type's title
+     * translation method).
+     */
+    public function isTitleSharedWithOtherSites(ElementInterface $element): bool
+    {
+        return $this->isSharedWithOtherSites($element, fn(ElementInterface $site) => $site->getTitleTranslationKey());
+    }
+
+    /**
+     * @param callable(ElementInterface): string $translationKey
+     */
+    public function isSharedWithOtherSites(ElementInterface $element, callable $translationKey): bool
+    {
+        $otherSiteIds = array_values(array_diff($this->siteIdsOf($element), [(int)$element->siteId]));
+
+        if ($otherSiteIds === []) {
+            return false;
+        }
+
+        $key = $translationKey($element);
+
+        foreach ($otherSiteIds as $siteId) {
+            // The key as Craft computes it for the element in that site; a copy is enough,
+            // the key depends on the site (and, for a custom format, on the element).
+            $inOtherSite = clone $element;
+            $inOtherSite->siteId = $siteId;
+
+            if ($translationKey($inOtherSite) === $key) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * The sites the element exists in, looked up by canonical id so a draft and its
+     * canonical element answer the same. Cached per element for the lifetime of this
+     * component: site membership does not change during a request.
+     *
+     * @return list<int>
+     */
+    private function siteIdsOf(ElementInterface $element): array
+    {
+        $canonicalId = (int)$element->getCanonicalId();
+
+        return $this->siteIdsByElement[$canonicalId] ??= array_map('intval', (new Query())
+            ->select(['siteId'])
+            ->from(Table::ELEMENTS_SITES)
+            ->where(['elementId' => $canonicalId])
+            ->column());
+    }
+
+    /**
      * @param array<string, ExtractedText> $items
      * @param list<array{handle: string, entryId: int, siblingIds: list<int>}> $entryPath
      */
     private function walk(ElementInterface $owner, TextAddress $prefix, array $entryPath, array &$items): void
     {
-        if ($this->hasEditableTitle($owner)) {
+        if ($this->hasEditableTitle($owner) && !$this->isTitleSharedWithOtherSites($owner)) {
             $title = (string)$owner->title;
 
             if ($this->isExtractableValue($title, TextItem::TYPE_PLAIN)) {
@@ -286,7 +360,7 @@ class TextExtractor extends Component
 
         if ($entryPath === []) {
             $seoField = $this->seomaticField($owner);
-            $meta = $seoField ? $this->seoMeta($owner, $seoField) : null;
+            $meta = $seoField && !$this->isFieldSharedWithOtherSites($owner, $seoField) ? $this->seoMeta($owner, $seoField) : null;
 
             foreach ([TextAddress::SEO_TITLE => 'seoTitle', TextAddress::SEO_DESCRIPTION => 'seoDescription'] as $leaf => $key) {
                 $value = $meta[$key] ?? null;
@@ -316,7 +390,7 @@ class TextExtractor extends Component
 
             $type = $this->textTypeOf($field);
 
-            if ($type === null || $this->isFieldExcluded($field->handle)) {
+            if ($type === null || $this->isFieldExcluded($field->handle) || $this->isFieldSharedWithOtherSites($owner, $field)) {
                 continue;
             }
 

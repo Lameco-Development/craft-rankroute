@@ -61,6 +61,21 @@ After an independent security review (`docs/plans/2026-09-16-review-fixes.md`):
 - Export by id only finds top-level entries, categories and Commerce products; a `500`
   answers a reference, not the exception detail.
 
+After a multi-site review (2026-09-22, prompted by the n8n flow writing one language's SEO
+meta into every language on a multilingual site):
+
+- Text shared with another site the element exists in is not an item: a field whose
+  translation key (translation method "none", or a site group, language or custom key)
+  is the same in another site of the element, the SEOmatic field included, and a native
+  title whose title translation method shares it. Craft propagates such a value on save,
+  so writing it for one site wrote it into every site sharing it, and the structure check
+  of the target site could not see that. The snapshot keeps such values in full.
+- A full URL is resolved on its host first: only sites whose base URL has that host
+  (ignoring case, port and a leading `www.`) are candidates, so a site on its own domain
+  resolves to that site instead of the primary one. A path, or a URL on a host no site
+  has, resolves as before. The resolver is shared, so this also applies to the optimizer
+  and bulk meta flows.
+
 ## Alternatives considered
 
 - **Fix `MatrixFieldHandler` and the link export in the optimizer flow.** Needed for the
@@ -76,7 +91,8 @@ After an independent security review (`docs/plans/2026-09-16-review-fixes.md`):
   response are a contract with the RankRoute backend; changing them is a breaking change.
 - Some text cannot be optimised: empty fields (the model must not add content), values
   that are a URL, e-mail address, number or contain Twig, link labels, Table cells, fields
-  whose handle matches `excludeFields`, anything inside a nested entry whose type matches
+  whose handle matches `excludeFields`, text shared with another site of the element,
+  anything inside a nested entry whose type matches
   `excludeEntryTypes` or that is disabled, and text inside CKEditor nested entries. Those
   fail safe: the `<craft-entry>` tag is part of the tag skeleton and the rest of the
   structure is compared in full.
@@ -100,10 +116,9 @@ After an independent security review (`docs/plans/2026-09-16-review-fixes.md`):
 - **Target site only.** Validation, the write and the structure check cover the site of the
   request. A draft exists in every site of the element, but its other sites are not
   compared.
-- **Non-translatable text fields propagate.** A text field whose translation method shares
-  its value across sites is written in the target site, and applying the draft changes
-  every site sharing that value. The flow does not detect this; sites should keep content
-  fields translatable per site (lameco.nl does).
+- **Shared text is not optimised.** Text whose value is shared between sites (see above)
+  is left out, also on single-language multi-site installs where sharing is intended.
+  Make a content field translatable per site to have it optimised.
 - **Unreadable values.** A field value the snapshot cannot read (the field throws) is
   recorded as its exception class plus a hash of the message. Two identical failures on
   canonical and draft still compare equal, so a field that always throws is not checked.

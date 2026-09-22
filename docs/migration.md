@@ -152,9 +152,9 @@ client of the text endpoints. Per site, in order:
 3. **Review `config/rankroute.php`.** The defaults exclude `*url`, `*webhook*`, `importId`,
    `*Id`, `llmContent`, `cocNumber` and nested entries of type `*button*`. Add the site's
    own non-content text fields and button-like entry types before the smoke run.
-   On a multi-site install, check that content text fields are translatable per site: the
-   text flow only checks the target site, and a shared value changes every site when the
-   draft is applied (ADR 0003, Limits).
+   On a multi-site install, check that content text fields and the SEOmatic field are
+   translatable per site: text shared between sites is never exported, so it is not
+   optimised (ADR 0003, Limits).
 4. **Run the smoke command** on the site's server:
 
    ```bash
