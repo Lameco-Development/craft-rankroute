@@ -12,8 +12,8 @@ use lameco\rankroute\dto\StructureCheckResult;
 use lameco\rankroute\dto\TextImportResult;
 use lameco\rankroute\Plugin;
 use lameco\rankroute\services\text\ExtractedText;
-use lameco\rankroute\services\text\TextAddress;
 use lameco\rankroute\services\text\TextImportValidator;
+use lameco\rankroute\services\text\TextWriter;
 use Throwable;
 use yii\web\BadRequestHttpException;
 use yii\web\NotFoundHttpException;
@@ -23,14 +23,9 @@ use yii\web\NotFoundHttpException;
  * draft, leaving every other value and every nested entry's identity untouched, and prove
  * it with the structure check before answering.
  *
- * Nested entries are written through Craft's own delta Matrix format on the draft
- * (`['entries' => [<id> => ['title' => …, 'fields' => […]]], 'sortOrder' => [<all ids>]]`),
- * nested as deep as the text sits. For an entry id listed in `entries`, Craft loads the
- * existing entry, sets only the given values on it, and, because the draft does not own
- * it primarily, saves a derivative copy (with `canonicalId` pointing at the original) for
- * the draft; every id only in `sortOrder` is kept as is. See
- * `craft\fields\Matrix::_createEntriesFromSerializedData()` and
- * `NestedElementManager::saveNestedElements()`.
+ * The strings are written by {@see TextWriter} through Craft's delta Matrix format, so
+ * nested entries the draft does not own primarily get a derivative copy for the draft and
+ * keep their identity.
  */
 class TextImportService extends Component
 {
@@ -392,88 +387,12 @@ class TextImportService extends Component
      */
     private function applyChanges(ElementInterface $draft, array $extracted, array $changes): void
     {
-        /** @var array<string, array<string, mixed>> $matrixDeltas top-level Matrix handle => delta value */
-        $matrixDeltas = [];
-        $seoValues = [];
+        $writes = [];
 
         foreach ($changes as $id => $value) {
-            $text = $extracted[$id];
-
-            if ($text->entryPath === []) {
-                if ($text->address->isSeo()) {
-                    $seoValues[$text->address->leaf === TextAddress::SEO_TITLE ? 'seoTitle' : 'seoDescription'] = $value;
-                } elseif ($text->address->isTitle()) {
-                    $draft->title = $value;
-                } else {
-                    $draft->setFieldValue($text->address->leaf, $value);
-                }
-
-                continue;
-            }
-
-            $this->addToDelta($matrixDeltas, $text->entryPath, $text->address, $value);
+            $writes[] = ['entryPath' => $extracted[$id]->entryPath, 'address' => $extracted[$id]->address, 'value' => $value];
         }
 
-        foreach ($matrixDeltas as $handle => $delta) {
-            $draft->setFieldValue($handle, $delta);
-        }
-
-        if ($seoValues !== []) {
-            $this->applySeo($draft, $seoValues);
-        }
-    }
-
-    /**
-     * Adds one nested string to the delta tree:
-     * `handle => {entries: {id: {title?, fields: {handle => value | nested delta}}}, sortOrder}`.
-     * `sortOrder` always lists every existing nested entry, so none is dropped or reordered.
-     *
-     * @param array<string, mixed> $fields
-     * @param list<array{handle: string, entryId: int, siblingIds: list<int>}> $path
-     */
-    private function addToDelta(array &$fields, array $path, TextAddress $address, string $value): void
-    {
-        $step = array_shift($path);
-        $handle = $step['handle'];
-        $fields[$handle] ??= ['entries' => [], 'sortOrder' => $step['siblingIds']];
-        $entry = $fields[$handle]['entries'][$step['entryId']] ?? [];
-
-        if ($path !== []) {
-            $entry['fields'] ??= [];
-            $this->addToDelta($entry['fields'], $path, $address, $value);
-        } elseif ($address->isTitle()) {
-            $entry['title'] = $value;
-        } else {
-            $entry['fields'][$address->leaf] = $value;
-        }
-
-        $fields[$handle]['entries'][$step['entryId']] = $entry;
-    }
-
-    /**
-     * Sets only `metaGlobalVars.seoTitle`/`seoDescription` on the draft's own SEOmatic value,
-     * keeping every other setting of it.
-     *
-     * @param array<string, string> $values
-     */
-    private function applySeo(ElementInterface $draft, array $values): void
-    {
-        $field = Plugin::getInstance()->textExtractor->seomaticField($draft);
-
-        if ($field === null) {
-            throw new \RuntimeException('The draft has no SEOmatic field.');
-        }
-
-        $bundle = $draft->getFieldValue($field->handle);
-
-        if (!is_object($bundle) || !is_object($bundle->metaGlobalVars ?? null)) {
-            throw new \RuntimeException('The SEOmatic value of the draft could not be read.');
-        }
-
-        foreach ($values as $key => $value) {
-            $bundle->metaGlobalVars->{$key} = $value;
-        }
-
-        $draft->setFieldValue($field->handle, $bundle);
+        (new TextWriter())->apply($draft, $writes);
     }
 }

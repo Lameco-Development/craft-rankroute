@@ -121,6 +121,22 @@ Comparing the structure snapshots of the canonical element and a draft. Runs on 
 import (a failure discards the draft) and on demand through `text/verify`. Answers
 `{passed, differences: [{path, before, after}]}`.
 
+**New page**:
+A copy of an existing entry (the *source*) made by `text/create`: an unpublished draft with
+the source's blocks, buttons, links and settings, new text in every text item, a new slug,
+and the placeholder image in place of every image. See ADR 0004.
+_Avoid_: template (there is no template concept; any entry can be the source), clone
+
+**Source**:
+The existing entry a new page is copied from, chosen by the customer. Its text export is
+the skeleton the backend fills.
+_Avoid_: base page, example page
+
+**Placeholder image**:
+The one asset (`rankroute-placeholder.png`, "RankRoute placeholder: vervang deze
+afbeelding") that replaces every image of a new page. Uploaded once per install from the
+plugin's bundled PNG and reused.
+
 **Smoke run**:
 `php craft rankroute/text-flow/smoke` against a site: the full text flow over HTTP for every
 live element, with a deterministic rewrite instead of an LLM, plus negative probes. Zero
@@ -149,4 +165,6 @@ answers, so n8n flows keep working until each site's flows are migrated. Removed
 - The plugin never publishes in the optimizer flow and never creates drafts in the bulk
   meta flow.
 - The text flow never publishes and never writes anything but text items: no fields,
-  nested entries, links or settings beyond the submitted strings.
+  nested entries, links or settings beyond the submitted strings. The one exception is
+  `text/create`, which copies an entry into a new unpublished draft and, besides the
+  strings, sets its slug, its structure position and the placeholder image.

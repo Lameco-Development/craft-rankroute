@@ -23,6 +23,16 @@ class StructureCheck extends Component
     }
 
     /**
+     * A new page against the entry it was copied from, see {@see StructureSnapshot::buildForCopy()}.
+     */
+    public function checkCopy(ElementInterface $source, ElementInterface $copy, ?int $placeholderId): StructureCheckResult
+    {
+        $snapshot = Plugin::getInstance()->structureSnapshot;
+
+        return $this->compare($snapshot->buildForCopy($source, $placeholderId), $snapshot->buildForCopy($copy, null));
+    }
+
+    /**
      * @param array<string, mixed> $before
      * @param array<string, mixed> $after
      */

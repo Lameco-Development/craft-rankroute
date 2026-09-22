@@ -57,6 +57,7 @@ same controller actions and honour the same `RANKROUTE_API_KEY` — never the ol
 | `rankroute/seo/import` | POST | `_craft-seo-import/api/import` | raw JSON bulk meta items |
 | `rankroute/text/export` | GET | — | `url`, **or** `id` with optional `siteId` (query) |
 | `rankroute/text/import` | POST | — | JSON `{elementId, siteId, fingerprint, items}` |
+| `rankroute/text/create` | POST | — | JSON `{sourceElementId, siteId, fingerprint, slug, items}` |
 | `rankroute/text/verify` | GET | — | `draftId`, optional `siteId` (query) |
 
 **Legacy aliases are removed in 0.1.0.** Removing them is a breaking change and waits for
@@ -77,7 +78,8 @@ every site in `docs/migration.md` to be ticked off.
     "seoImport": "rankroute/seo/import",
     "textExport": "rankroute/text/export",
     "textImport": "rankroute/text/import",
-    "textVerify": "rankroute/text/verify"
+    "textVerify": "rankroute/text/verify",
+    "textCreate": "rankroute/text/create"
   }
 }
 ```
@@ -381,6 +383,88 @@ the draft still counts as a difference.
 
 At most 50 differences are listed.
 
+### Text create (new page)
+
+`POST /actions/rankroute/text/create`
+
+Creates a new page as an unpublished draft: a copy of an existing entry (the source) with
+the submitted strings in its text items, a new slug, and one placeholder image in place of
+every image. Everything else (blocks, their order and count, buttons, links, forms,
+options, SEOmatic settings) is the source's. Nothing is published. See ADR 0004 and
+`docs/plans/2026-09-22-new-page-draft.md`.
+
+```json
+{
+  "sourceElementId": 51,
+  "siteId": 1,
+  "fingerprint": "sha256:9f2c…",
+  "slug": "industrial-applications",
+  "items": [
+    { "id": "title", "value": "Industrial applications" },
+    { "id": "pageBuilder[3].content", "value": "<p>Read <a href=\"/about\">who we are</a>.</p>" }
+  ],
+  "idempotencyKey": "gap-12"
+}
+```
+
+`url` may replace `sourceElementId`/`siteId`. `fingerprint` and `items` come from
+`text/export` of the source and are validated exactly like a text import (same codes, same
+order). `slug` must already be a normalised Craft slug of at most 255 characters. There is
+no separate title: the `title` item is the title. Only an entry of a channel or structure
+section can be a source.
+
+```json
+{
+  "success": true,
+  "sourceElementId": 51,
+  "siteId": 1,
+  "elementId": 4600,
+  "draftId": 130,
+  "draftElementId": 4600,
+  "slug": "industrial-applications",
+  "uri": "solutions/industrial-applications",
+  "cpEditUrl": "https://example.com/admin/entries/pages/4600?draftId=130",
+  "changedItems": ["title", "pageBuilder[3].content"],
+  "placeholderAssetId": 77,
+  "placeholders": ["image", "pageBuilder[2].items[0].cardImage", "headerTitle"],
+  "structureCheck": { "passed": true, "differences": [] },
+  "replayed": false
+}
+```
+
+- `elementId` equals `draftElementId`: the new page is its own canonical element and keeps
+  that id when the editor publishes it.
+- `changedItems`: the items whose value differs from the source.
+- `placeholders`: every Assets field (any depth) set to the placeholder, then every `html`
+  item in which an `{asset:…}` reference tag now points at it. `placeholderAssetId` is
+  `null` when the source had no images.
+- **Structure**: same parent as the source, at the end of that level. Drafts are left out
+  of every element query, so menus only change once the editor publishes.
+- **Sites**: the strings are written in the requested site only. In every other site the
+  copy is disabled and keeps the source's texts in that language, with the new slug.
+- **Placeholder image**: `rankroute-placeholder.png` in the root folder of
+  `textFlow.placeholderVolume` (or the first volume), uploaded from the plugin once and
+  reused; created only when a copy has an image to replace.
+
+| Status | `code` | Meaning |
+|---|---|---|
+| 409 | `fingerprint_mismatch` | The source changed since the export |
+| 409 | `slug_taken` | The URI of the slug in that site belongs to a live element or another unpublished draft. Never auto-suffixed |
+| 422 | `unsupported_element` | The source is not an entry of a channel or structure section |
+| 422 | `invalid_idempotency_key` | As import |
+| 422 | `invalid_slug` | Empty, not normalised (`ElementHelper::normalizeSlug`), longer than 255 characters, or reserved |
+| 422 | item codes | As import |
+| 500 | `structure_check_failed` | The copy differs from the source in more than text, slug and images; nothing is kept |
+
+`400`, `401`, `404` and unexpected `500`s answer `{"error": "…"}` as elsewhere. A missing
+placeholder volume (none at all, or an unknown `placeholderVolume`) is such a `500`, before
+anything is written.
+
+**`idempotencyKey`** works as for import: stored in the draft notes (`rankroute:<key>`, then
+a JSON line with the source, site, slug, placeholder and changed items); a retry with the
+same key for the same source and site answers from that draft with `"replayed": true`. The
+key lives in the draft, so once the page is published a new request creates another page.
+
 ### Text verify
 
 `GET /actions/rankroute/text/verify?draftId=<drafts.id>[&siteId=<siteId>]`
@@ -388,6 +472,11 @@ At most 50 differences are listed.
 Runs the structure check for an existing draft against its canonical element. Without
 `siteId` the draft is checked in the primary site, or in the first site it exists in.
 `400` without a numeric `draftId`, `404` for an unknown draft.
+
+For a new page from `text/create` it compares the draft with its source in copy mode
+(nested entries by position; slug, URI, dates and images excepted) and adds
+`sourceElementId` to the response; without `siteId` it checks the site the page was
+created for. Any other unpublished draft answers `404`.
 
 ```json
 {
@@ -427,6 +516,8 @@ return [
         // For a multilingual site the fix is the other way round: make those fields, the
         // SEOmatic field included, translatable per site, and leave this off.
         'exportSharedText' => false,
+        // volume handle for the text/create placeholder image; null = the first volume
+        'placeholderVolume' => null,
     ],
 ];
 ```

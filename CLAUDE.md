@@ -35,9 +35,10 @@ One plugin replacing two: `lameco/craft-entry-optimizer` (export an element to J
 - `services/ExportService`, `services/ImportService`, `services/FieldHandlerRegistry`, `services/fieldhandlers/*` — carried over from entry-optimizer
 - `services/SeoBulkService` — carried over from seo-import's controller
 - `dto/*` — readonly result objects with `toArray()`
-- `controllers/TextController`: `export`, `import`, `verify` (the text flow, ADR 0003)
+- `controllers/TextController`: `export`, `import`, `create`, `verify` (the text flow, ADR 0003; `create` ADR 0004)
 - `services/TextExportService`, `services/TextImportService`: text items out; validated strings into a draft via Craft's delta Matrix format, then the structure check. Text a field's or title's translation method shares with another site of the element is not an item, unless `textFlow.exportSharedText` is on
-- `services/text/*`: `TextExtractor` (element → text items, `config/rankroute.php` excludes), `TextAddress`, `HtmlSkeleton`, `TextImportValidator`, `StructureSnapshot`, `StructureCheck`, `Fingerprint`, `SmokeRewrite`
+- `services/TextCreateService`: a new page from a source entry: validate like import, `duplicateElement` as unpublished draft, write the strings and the placeholder image, structure check in copy mode, 409 on a taken slug
+- `services/text/*`: `TextExtractor` (element → text items and non-empty Assets fields, `config/rankroute.php` excludes), `TextAddress`, `HtmlSkeleton`, `TextImportValidator`, `TextWriter` (values at addresses onto a draft, shared by import and create), `StructureSnapshot` (+ copy mode), `StructureCheck`, `Fingerprint`, `PlaceholderImage` (bundled `src/resources/rankroute-placeholder.png`, uploaded once), `SmokeRewrite`
 - `console/controllers/TextFlowController`: `rankroute/text-flow/smoke`, the per-site gate before the text flow is enabled
 
 Legacy action paths (`/actions/_craft-entry-optimizer/optimized-entry/*`, `/actions/_craft-seo-import/api/import`) are served by this plugin through the 0.0.x line, see `docs/adr/0002-legacy-action-aliases.md`. They and the `optimizer/*` endpoints stay unchanged for the n8n flows; the text flow has no legacy alias and its only client is the RankRoute backend (Laravel, separate `rankroute` repo).

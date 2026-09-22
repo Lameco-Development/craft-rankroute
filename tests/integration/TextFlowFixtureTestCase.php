@@ -44,7 +44,7 @@ use yii\web\Response;
  * - 0 textBlock: heading "Intro heading", content with `<a href="/about">`
  * - 1 textBlock, disabled: "Hidden heading" (never extracted)
  * - 2 cardsBlock "Cards title", items:
- *   - 0 card "First card", cardText, contentBuilder:
+ *   - 0 card "First card", cardText, cardImage (the other asset), contentBuilder:
  *     - 0 richText: `<p>Deep <strong>rich</strong> text</p>`
  *     - 1 actionsBlock: "Pick an action", buttons: 0 url button, 1 entry button
  *   - 1 card "Second card", cardText empty
@@ -163,6 +163,7 @@ abstract class TextFlowFixtureTestCase extends IntegrationTestCase
                         'items' => [
                             'new1' => ['type' => 'card', 'enabled' => true, 'title' => 'First card', 'fields' => [
                                 'cardText' => 'First card text',
+                                'cardImage' => [$this->otherAssetId],
                                 'contentBuilder' => [
                                     'new1' => ['type' => 'richText', 'enabled' => true, 'fields' => [
                                         'richBody' => '<p>Deep <strong>rich</strong> text</p>',
@@ -519,7 +520,8 @@ abstract class TextFlowFixtureTestCase extends IntegrationTestCase
         $actionsBlock = $this->entryType('Actions block', 'actionsBlock', ['actionsIntro', 'buttons'], hasTitleField: false);
         $this->saveMatrix('Content builder', 'contentBuilder', [$richText, $actionsBlock]);
 
-        $card = $this->entryType('Card', 'card', [new EntryTitleField(), 'cardText', 'contentBuilder']);
+        $this->saveField(new Assets(['name' => 'Card image', 'handle' => 'cardImage', 'sources' => '*']));
+        $card = $this->entryType('Card', 'card', [new EntryTitleField(), 'cardText', 'cardImage', 'contentBuilder']);
         $this->saveMatrix('Items', 'items', [$card]);
 
         $textBlock = $this->entryType('Text block', 'textBlock', ['heading', 'content'], hasTitleField: false);

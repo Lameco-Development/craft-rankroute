@@ -14,9 +14,9 @@ use yii\web\Response;
 use yii\web\UnauthorizedHttpException;
 
 /**
- * `rankroute/text/*`: the text flow (export, import, verify). Errors other than import
- * validation answer `{"error": "…"}` with their HTTP status, the shape the n8n workflow
- * reads; import validation and structure check failures answer their own documented body.
+ * `rankroute/text/*`: the text flow (export, import, create, verify). Errors other than
+ * import/create validation answer `{"error": "…"}` with their HTTP status; validation and
+ * structure check failures answer their own documented body.
  */
 class TextController extends Controller
 {
@@ -33,6 +33,7 @@ class TextController extends Controller
     protected array|bool|int $allowAnonymous = [
         'export' => self::ALLOW_ANONYMOUS_LIVE,
         'import' => self::ALLOW_ANONYMOUS_LIVE,
+        'create' => self::ALLOW_ANONYMOUS_LIVE,
         'verify' => self::ALLOW_ANONYMOUS_LIVE,
     ];
 
@@ -80,15 +81,7 @@ class TextController extends Controller
     public function actionImport(): Response
     {
         try {
-            $this->requirePostRequest();
-            $body = $this->request->getRawBody();
-            $payload = json_decode($body, true);
-
-            if ($body === '' || json_last_error() !== JSON_ERROR_NONE) {
-                throw new HttpException(400, 'The request body must be valid JSON.');
-            }
-
-            $result = Plugin::getInstance()->textImportService->import($payload);
+            $result = Plugin::getInstance()->textImportService->import($this->jsonBody());
             $this->response->setStatusCode($result->statusCode);
 
             return $this->asJson($result->toArray());
@@ -98,9 +91,27 @@ class TextController extends Controller
     }
 
     /**
-     * `GET ?draftId=<drafts.id>[&siteId=<id>]`: the structure check for an existing draft.
-     * Without `siteId` the draft is checked in the primary site, or in the first site it
-     * exists in.
+     * `POST {sourceElementId, siteId, fingerprint, slug, items: [{id, value}], idempotencyKey?}`
+     * (or `url` instead of `sourceElementId`/`siteId`): a new page as an unpublished draft,
+     * copied from the source (ADR 0004).
+     */
+    public function actionCreate(): Response
+    {
+        try {
+            $result = Plugin::getInstance()->textCreateService->create($this->jsonBody());
+            $this->response->setStatusCode($result->statusCode);
+
+            return $this->asJson($result->toArray());
+        } catch (Throwable $e) {
+            return $this->errorResponse($e);
+        }
+    }
+
+    /**
+     * `GET ?draftId=<drafts.id>[&siteId=<id>]`: the structure check for an existing draft,
+     * against its canonical element, or for a new page from `text/create`, against its
+     * source. Without `siteId` a draft is checked in the primary site, or in the first site
+     * it exists in; a new page in the site it was created for.
      */
     public function actionVerify(): Response
     {
@@ -112,15 +123,13 @@ class TextController extends Controller
                 throw new HttpException(400, 'A draftId is required.');
             }
 
-            $canonicalId = (new Query())
-                ->select(['canonicalId'])
-                ->from(Table::DRAFTS)
-                ->where(['id' => (int)$draftId])
+            $elementType = (new Query())
+                ->select(['type'])
+                ->from(Table::ELEMENTS)
+                ->where(['draftId' => (int)$draftId])
                 ->scalar();
 
-            $elementType = $canonicalId ? Craft::$app->getElements()->getElementTypeById((int)$canonicalId) : null;
-
-            if (!$elementType) {
+            if (!is_string($elementType) || !is_subclass_of($elementType, ElementInterface::class)) {
                 throw new HttpException(404, "Draft {$draftId} not found.");
             }
 
@@ -134,7 +143,12 @@ class TextController extends Controller
             }
 
             $draft = $query->one();
-            $canonical = $draft ? Craft::$app->getElements()->getElementById((int)$canonicalId, $elementType, $draft->siteId) : null;
+
+            if ($draft !== null && $draft->getIsUnpublishedDraft()) {
+                return $this->verifyNewPage($draft, (int)$draftId, is_numeric($siteId));
+            }
+
+            $canonical = $draft ? Craft::$app->getElements()->getElementById($draft->getCanonicalId(), $elementType, $draft->siteId) : null;
 
             if (!$draft || !$canonical) {
                 throw new HttpException(404, "Draft {$draftId} not found.");
@@ -153,6 +167,42 @@ class TextController extends Controller
         } catch (Throwable $e) {
             return $this->errorResponse($e);
         }
+    }
+
+    /**
+     * @throws HttpException 404 when the unpublished draft is not a new page from `text/create`
+     */
+    private function verifyNewPage(ElementInterface $draft, int $draftId, bool $siteGiven): Response
+    {
+        $verified = Plugin::getInstance()->textCreateService->verify($draft, $siteGiven)
+            ?? throw new HttpException(404, "Draft {$draftId} is not a new page from text/create, or its source no longer exists.");
+        $draft = $verified['draft'];
+
+        return $this->asJson([
+            'success' => true,
+            'elementId' => (int)$draft->id,
+            'sourceElementId' => (int)$verified['source']->id,
+            'siteId' => (int)$draft->siteId,
+            'draftId' => $draftId,
+            'draftElementId' => (int)$draft->id,
+            'structureCheck' => $verified['check']->toArray(),
+        ]);
+    }
+
+    /**
+     * @throws HttpException 400 for a missing or malformed body
+     */
+    private function jsonBody(): mixed
+    {
+        $this->requirePostRequest();
+        $body = $this->request->getRawBody();
+        $payload = json_decode($body, true);
+
+        if ($body === '' || json_last_error() !== JSON_ERROR_NONE) {
+            throw new HttpException(400, 'The request body must be valid JSON.');
+        }
+
+        return $payload;
     }
 
     private function errorResponse(Throwable $e): Response

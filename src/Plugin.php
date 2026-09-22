@@ -20,9 +20,11 @@ use lameco\rankroute\services\fieldhandlers\SeomaticFieldHandler;
 use lameco\rankroute\services\ImportService;
 use lameco\rankroute\services\SeoBulkService;
 use lameco\rankroute\services\text\Fingerprint;
+use lameco\rankroute\services\text\PlaceholderImage;
 use lameco\rankroute\services\text\StructureCheck;
 use lameco\rankroute\services\text\StructureSnapshot;
 use lameco\rankroute\services\text\TextExtractor;
+use lameco\rankroute\services\TextCreateService;
 use lameco\rankroute\services\TextExportService;
 use lameco\rankroute\services\TextImportService;
 
@@ -42,6 +44,8 @@ use lameco\rankroute\services\TextImportService;
  * @property-read Fingerprint $textFingerprint
  * @property-read TextExportService $textExportService
  * @property-read TextImportService $textImportService
+ * @property-read TextCreateService $textCreateService
+ * @property-read PlaceholderImage $placeholderImage
  */
 class Plugin extends BasePlugin
 {
@@ -62,6 +66,8 @@ class Plugin extends BasePlugin
                 'textFingerprint' => ['class' => Fingerprint::class],
                 'textExportService' => ['class' => TextExportService::class],
                 'textImportService' => ['class' => TextImportService::class],
+                'textCreateService' => ['class' => TextCreateService::class],
+                'placeholderImage' => ['class' => PlaceholderImage::class],
             ],
         ];
     }
