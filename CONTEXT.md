@@ -124,7 +124,8 @@ import (a failure discards the draft) and on demand through `text/verify`. Answe
 **New page**:
 A copy of an existing entry (the *source*) made by `text/create`: an unpublished draft with
 the source's blocks, buttons, links and settings, new text in every text item, a new slug,
-and the placeholder image in place of every image. See ADR 0004.
+and the placeholder image in place of every image. Always disabled, so publishing it still
+does not put it live. See ADR 0004.
 _Avoid_: template (there is no template concept; any entry can be the source), clone
 
 **Source**:

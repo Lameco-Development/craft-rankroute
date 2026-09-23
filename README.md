@@ -423,6 +423,7 @@ section can be a source.
   "draftElementId": 4600,
   "slug": "industrial-applications",
   "uri": "solutions/industrial-applications",
+  "enabled": false,
   "cpEditUrl": "https://example.com/admin/entries/pages/4600?draftId=130",
   "changedItems": ["title", "pageBuilder[3].content"],
   "placeholderAssetId": 77,
@@ -438,6 +439,9 @@ section can be a source.
 - `placeholders`: every Assets field (any depth) set to the placeholder, then every `html`
   item in which an `{asset:…}` reference tag now points at it. `placeholderAssetId` is
   `null` when the source had no images.
+- **Status**: always disabled (`enabled: false`), whatever the source's status, in every
+  site. Publishing the draft gives a disabled entry, so a new page never goes live by
+  itself; the editor enables it deliberately.
 - **Structure**: same parent as the source, at the end of that level. Drafts are left out
   of every element query, so menus only change once the editor publishes.
 - **Sites**: the strings are written in the requested site only. In every other site the
@@ -474,7 +478,7 @@ Runs the structure check for an existing draft against its canonical element. Wi
 `400` without a numeric `draftId`, `404` for an unknown draft.
 
 For a new page from `text/create` it compares the draft with its source in copy mode
-(nested entries by position; slug, URI, dates and images excepted) and adds
+(nested entries by position; slug, URI, dates, status and images excepted) and adds
 `sourceElementId` to the response; without `siteId` it checks the site the page was
 created for. Any other unpublished draft answers `404`.
 

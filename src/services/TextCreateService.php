@@ -348,13 +348,14 @@ class TextCreateService extends Component
         $siteId = (int)$source->siteId;
         $parentId = $source instanceof Entry ? $source->getParentId() : null;
 
-        // Every other site of the copy: disabled there, the source's texts in that language.
+        // A new page is never live, whatever the status of its source: disabled as an
+        // element and for every site, so publishing the draft still gives a disabled entry
+        // that somebody has to enable on purpose. Every other site also keeps the source's
+        // texts in that language.
         $siteAttributes = [];
 
-        foreach (Craft::$app->getSites()->getAllSiteIds() as $otherSiteId) {
-            if ((int)$otherSiteId !== $siteId) {
-                $siteAttributes[(int)$otherSiteId] = ['enabledForSite' => false];
-            }
+        foreach (Craft::$app->getSites()->getAllSiteIds() as $eachSiteId) {
+            $siteAttributes[(int)$eachSiteId] = ['enabledForSite' => false];
         }
 
         $transaction = Craft::$app->getDb()->beginTransaction();
@@ -362,6 +363,8 @@ class TextCreateService extends Component
         try {
             $duplicate = $elementsService->duplicateElement($source, [
                 'slug' => $slug,
+                'enabled' => false,
+                'enabledForSite' => false,
                 'postDate' => null,
                 'expiryDate' => null,
                 'siteAttributes' => $siteAttributes,
@@ -413,6 +416,10 @@ class TextCreateService extends Component
             // Next to the source: same parent, placed when the draft is saved. Drafts are
             // left out of every element query, so no menu shows it before it is published.
             $copy->setParentId($parentId ?: false);
+            // Craft copies the source's status in a few places (site clones, propagation);
+            // this is the last word before the copy is saved.
+            $copy->enabled = false;
+            $copy->setEnabledForSite(false);
             $copy->setScenario(Element::SCENARIO_ESSENTIALS);
 
             if (!$elementsService->saveElement($copy)) {
@@ -506,6 +513,7 @@ class TextCreateService extends Component
             draftId: (int)$copy->draftId,
             slug: $copy->slug,
             uri: $copy->uri,
+            enabled: (bool)$copy->enabled && $copy->getEnabledForSite() !== false,
             cpEditUrl: $copy->getCpEditUrl(),
             changedItems: array_values($changedItems),
             placeholderAssetId: $placeholderId,

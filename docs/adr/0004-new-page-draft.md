@@ -13,7 +13,9 @@ the product meeting of 2026-09-22:
 - The new page is literally a copy of that entry: same section and entry type, same Matrix
   blocks in the same order and count, buttons, links, forms and other non-text data as in
   the source, new text in every text item and a new slug proposed by the backend.
-- It is a draft: nothing goes live, the customer reviews it in Craft.
+- It is a draft: nothing goes live, the customer reviews it in Craft. A new page is also
+  created disabled, so publishing the draft still does not put it live (decision of the
+  product owner, 2026-09-23).
 - The LLM does not generate images. Every image becomes one placeholder image that makes
   obvious what the editor still has to do.
 - Only for this flow; the text flow on existing entries (ADR 0003) stays as it is.
@@ -33,7 +35,8 @@ are in `docs/plans/2026-09-22-new-page-draft.md`; the README has the endpoint re
 | Validation | `TextImportValidator` unchanged, plus the fingerprint of the source (409). Content rules that compare with the original (length ratio, "must differ") are the backend's business; the plugin keeps its structural rules (tag skeleton, reference tags, SEO syntax) |
 | Copy | Craft's own `Elements::duplicateElement(…, asUnpublishedDraft: true)`: an unpublished draft that owns copies of every nested entry |
 | Write | The text flow writer (`TextWriter`, moved out of `TextImportService`) writes the strings and the placeholder through the delta Matrix format |
-| Proof | The structure check in copy mode compares source and copy: equal except nested entry ids (compared by position), slug, URI, post/expiry date and images (the source side is mapped to the placeholder). A difference rolls everything back (500) |
+| Proof | The structure check in copy mode compares source and copy: equal except nested entry ids (compared by position), slug, URI, post/expiry date, status and images (the source side is mapped to the placeholder). A difference rolls everything back (500) |
+| Status | Always disabled, as an element and for every site, whatever the source's status. Publishing the draft gives a disabled entry; enabling it is a separate action of the editor. The copy check therefore ignores the element's status, but not the status of each block |
 | Structure | Same parent as the source, appended at the end of that level. Drafts are invisible to element queries, so no menu changes until the editor publishes |
 | Slug | Supplied by the backend, must already be a normalised slug (422 `invalid_slug`). A slug whose URI a live element or another unpublished draft in that site has answers 409 `slug_taken`; never auto-suffixed |
 | Images | One bundled PNG, uploaded once as `rankroute-placeholder.png` into the root of `textFlow.placeholderVolume` or the first volume, found by filename and reused. It replaces every non-empty Assets field at every depth and every asset reference tag in the submitted HTML items |
@@ -63,6 +66,8 @@ are in `docs/plans/2026-09-22-new-page-draft.md`; the README has the endpoint re
 - `text/create`, its request and response, the error codes `slug_taken`, `invalid_slug`,
   `unsupported_element` and the create draft notes are a contract with the backend.
 - A published new page keeps its element id, so the `elementId` in the response stays valid.
+- The response carries `enabled` (always `false`), so the backend can report that the page
+  is not live yet.
 - `config/rankroute.php` gains `textFlow.placeholderVolume`.
 
 ## Limits

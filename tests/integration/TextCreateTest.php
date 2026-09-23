@@ -49,7 +49,7 @@ final class TextCreateTest extends TextFlowFixtureTestCase
         $data = $response->data;
         self::assertSame([
             'success', 'sourceElementId', 'siteId', 'elementId', 'draftId', 'draftElementId', 'slug', 'uri',
-            'cpEditUrl', 'changedItems', 'placeholderAssetId', 'placeholders', 'structureCheck', 'replayed',
+            'enabled', 'cpEditUrl', 'changedItems', 'placeholderAssetId', 'placeholders', 'structureCheck', 'replayed',
         ], array_keys($data));
         self::assertTrue($data['success']);
         self::assertSame($this->pageId, $data['sourceElementId']);
@@ -58,6 +58,7 @@ final class TextCreateTest extends TextFlowFixtureTestCase
         self::assertNotSame($this->pageId, $data['elementId']);
         self::assertSame(self::SLUG, $data['slug']);
         self::assertSame('solutions/' . self::SLUG, $data['uri']);
+        self::assertFalse($data['enabled']);
         self::assertNotEmpty($data['cpEditUrl']);
         self::assertSame(array_column($export['items'], 'id'), $data['changedItems']);
         self::assertSame(['passed' => true, 'differences' => []], $data['structureCheck']);
@@ -69,6 +70,10 @@ final class TextCreateTest extends TextFlowFixtureTestCase
         self::assertSame($this->page()->typeId, $copy->typeId);
         self::assertSame(self::SLUG, $copy->slug);
         self::assertNull($copy->postDate);
+        // Never live, whatever the source's status.
+        self::assertTrue($this->page()->enabled);
+        self::assertFalse($copy->enabled);
+        self::assertFalse($copy->getEnabledForSite());
 
         // Every text item of the copy is the submitted value, at the same address (Craft
         // rewrites reference tag fallbacks on save).
@@ -231,14 +236,34 @@ final class TextCreateTest extends TextFlowFixtureTestCase
         self::assertSame([...$siblingsBefore, $published->id], $this->childIds($this->parentPageId));
     }
 
-    public function testOtherSitesAreDisabledAndKeepTheirOwnTexts(): void
+    public function testThePublishedPageIsStillDisabled(): void
+    {
+        $data = $this->createPage($this->createPayloadFor($this->exportDocument()))->data;
+
+        $published = Craft::$app->getDrafts()->applyDraft($this->copy($data['draftId']));
+
+        self::assertFalse($published->getIsDraft());
+        self::assertFalse($published->enabled);
+        self::assertFalse($published->getEnabledForSite());
+        $publishedNl = Entry::find()->id($published->id)->siteId($this->nlSiteId)->status(null)->one();
+        self::assertFalse($publishedNl->getEnabledForSite());
+
+        // Not a live page: only a query that asks for every status finds it.
+        self::assertNull(Entry::find()->uri('solutions/' . self::SLUG)->siteId($this->primarySiteId)->one());
+        self::assertNull(Entry::find()->id($published->id)->siteId($this->primarySiteId)->one());
+        self::assertSame($published->id, Entry::find()->id($published->id)->siteId($this->primarySiteId)->status(null)->one()?->id);
+        self::assertSame('disabled', $published->getStatus());
+    }
+
+    public function testEverySiteIsDisabledAndOtherSitesKeepTheirOwnTexts(): void
     {
         $data = $this->createPage($this->createPayloadFor($this->exportDocument()))->data;
 
         $primary = $this->copy($data['draftId']);
         $nl = $this->copy($data['draftId'], $this->nlSiteId);
 
-        self::assertTrue($primary->getEnabledForSite());
+        self::assertFalse($primary->enabled);
+        self::assertFalse($primary->getEnabledForSite());
         self::assertFalse($nl->getEnabledForSite());
         self::assertSame('Applications' . SmokeRewrite::MARK, $primary->title);
         self::assertSame('Toepassingen', $nl->title);
@@ -263,7 +288,7 @@ final class TextCreateTest extends TextFlowFixtureTestCase
         $nl = $this->copy($response->data['draftId'], $this->nlSiteId);
         $primary = $this->copy($response->data['draftId'], $this->primarySiteId);
         self::assertSame('Toepassingen' . SmokeRewrite::MARK, $nl->title);
-        self::assertTrue($nl->getEnabledForSite());
+        self::assertFalse($nl->getEnabledForSite());
         self::assertSame('Applications', $primary->title);
         self::assertFalse($primary->getEnabledForSite());
     }

@@ -37,7 +37,7 @@ One plugin replacing two: `lameco/craft-entry-optimizer` (export an element to J
 - `dto/*` — readonly result objects with `toArray()`
 - `controllers/TextController`: `export`, `import`, `create`, `verify` (the text flow, ADR 0003; `create` ADR 0004)
 - `services/TextExportService`, `services/TextImportService`: text items out; validated strings into a draft via Craft's delta Matrix format, then the structure check. Text a field's or title's translation method shares with another site of the element is not an item, unless `textFlow.exportSharedText` is on
-- `services/TextCreateService`: a new page from a source entry: validate like import, `duplicateElement` as unpublished draft, write the strings and the placeholder image, structure check in copy mode, 409 on a taken slug
+- `services/TextCreateService`: a new page from a source entry: validate like import, `duplicateElement` as unpublished draft (always disabled, in every site), write the strings and the placeholder image, structure check in copy mode, 409 on a taken slug
 - `services/text/*`: `TextExtractor` (element → text items and non-empty Assets fields, `config/rankroute.php` excludes), `TextAddress`, `HtmlSkeleton`, `TextImportValidator`, `TextWriter` (values at addresses onto a draft, shared by import and create), `StructureSnapshot` (+ copy mode), `StructureCheck`, `Fingerprint`, `PlaceholderImage` (bundled `src/resources/rankroute-placeholder.png`, uploaded once), `SmokeRewrite`
 - `console/controllers/TextFlowController`: `rankroute/text-flow/smoke`, the per-site gate before the text flow is enabled
 

@@ -23,6 +23,7 @@ readonly class TextCreateResult
      * @param int|null $draftId `drafts.id` of the new page
      * @param string|null $slug
      * @param string|null $uri The URI the page gets when published, null without URLs
+     * @param bool $enabled Whether the page would be live once published: always false, a new page is never enabled
      * @param string|null $cpEditUrl
      * @param string[] $changedItems Addresses whose value differs from the source
      * @param int|null $placeholderAssetId The placeholder image, null when nothing needed it
@@ -40,6 +41,7 @@ readonly class TextCreateResult
         public ?int $draftId = null,
         public ?string $slug = null,
         public ?string $uri = null,
+        public bool $enabled = false,
         public ?string $cpEditUrl = null,
         public array $changedItems = [],
         public ?int $placeholderAssetId = null,
@@ -97,6 +99,7 @@ readonly class TextCreateResult
             'draftElementId' => $this->elementId,
             'slug' => $this->slug,
             'uri' => $this->uri,
+            'enabled' => $this->enabled,
             'cpEditUrl' => $this->cpEditUrl,
             'changedItems' => $this->changedItems,
             'placeholderAssetId' => $this->placeholderAssetId,

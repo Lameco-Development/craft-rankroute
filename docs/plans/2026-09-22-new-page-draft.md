@@ -87,6 +87,7 @@ slug collision (`409 slug_taken`, checked on the copy inside the transaction).
   "draftElementId": 4600,
   "slug": "industrial-applications",
   "uri": "solutions/industrial-applications",
+  "enabled": false,
   "cpEditUrl": "https://example.com/admin/entries/pages/4600?draftId=130",
   "changedItems": ["title", "pageBuilder[3].content"],
   "placeholderAssetId": 77,
@@ -104,6 +105,8 @@ slug collision (`409 slug_taken`, checked on the copy inside the transaction).
 - `placeholders`: addresses (text flow address syntax) of every Assets field set to the
   placeholder, plus every `html` item in which an asset reference tag was replaced.
 - `uri`: the URI the page will get when published, `null` when the section has no URLs.
+- `enabled`: always `false`. A new page is created disabled in every site, so publishing it
+  still gives a disabled entry.
 
 ### Errors
 
@@ -147,6 +150,21 @@ An unpublished draft that `text/create` did not make answers `404`.
 
 ## Decisions
 
+### Status: always disabled, in every site
+
+Whatever the status of the source, the copy is disabled as an element and for every site.
+When the editor clicks "Create entry" (or applies the draft in any other way) the entry
+that comes out is still disabled, so it is not a live page and no menu or listing that
+filters on status shows it. Enabling it is a separate, deliberate action of the editor.
+The status is set on the duplicate itself, in `siteAttributes` for every site, and once
+more on the copy before it is saved, so none of the places where Craft copies the source's
+status can put it back.
+
+Because the copy may differ in status from its source, the structure check in copy mode
+leaves `enabled` and `enabledForSite` of the element out of the comparison (the status of
+each nested block is still compared, that is part of the structure). So an editor who
+enables the page before publishing does not make `text/verify` fail.
+
 ### Structure position: next to the source
 
 The copy gets the source's parent (root level when the source is at the root) and is
@@ -157,9 +175,6 @@ source, just like a page the editor would have created next to it; the parent ca
 changed in the draft before publishing. Root level was the alternative, but a root-level
 page is exactly what a main menu built from `level(1)` shows, and the URI would no longer
 follow the source's pattern. A parent proposal from the backend can be added later.
-
-The status is copied from the source: when the editor publishes, the page is live if the
-source was. See open questions.
 
 ### Placeholder image: one bundled PNG, created once per install
 
@@ -223,4 +238,5 @@ placeholder shows in every site; those sites are disabled anyway.
   field, buttons and links unchanged, the source untouched; placeholder reused; inline
   image replaced; slug taken (live and draft) → 409; invalid slug → 422; every import
   rejection path → 422 with nothing created; fingerprint → 409; replay; multi-site
-  (other site disabled, keeps its own texts); structure position after publishing; verify.
+  (every site disabled, other sites keep their own texts); structure position after
+  publishing; the published entry is still disabled and is not a live page; verify.

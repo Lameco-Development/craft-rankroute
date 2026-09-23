@@ -35,8 +35,12 @@ use Throwable;
  */
 class StructureSnapshot extends Component
 {
-    /** Element attributes a new page has of its own rather than copied from its source. */
-    public const COPY_OWN_ATTRIBUTES = ['slug', 'uri', 'postDate', 'expiryDate'];
+    /**
+     * Element attributes a new page has of its own rather than copied from its source: its
+     * slug and URI, no post or expiry date, and its status (a new page is created disabled,
+     * and the editor may enable it before publishing).
+     */
+    public const COPY_OWN_ATTRIBUTES = ['slug', 'uri', 'postDate', 'expiryDate', 'enabled', 'enabledForSite'];
 
     /**
      * Set while {@see buildForCopy()} runs.
