@@ -7,6 +7,7 @@ use craft\base\Field;
 use craft\base\FieldInterface;
 use craft\elements\Entry;
 use lameco\rankroute\services\text\HtmlSkeleton;
+use lameco\rankroute\services\text\TextExtractor;
 use lameco\rankroute\services\text\TextImportValidator;
 use RuntimeException;
 
@@ -300,6 +301,94 @@ final class TextFlowMultiSiteTest extends TextFlowFixtureTestCase
         self::assertSame('Een nieuwe introductie', $this->page($this->nlSiteId)->getFieldValue('intro'));
         // Applying resaves the other sites here, which rewrites reference tag fallbacks.
         self::assertSame($this->withoutFallbacks($primaryBefore), $this->withoutFallbacks($this->flatten($this->page())));
+    }
+
+    public function testSharedTextIsExportedAndWrittenWhenTheOptionIsOn(): void
+    {
+        $this->plugin()->textExtractor->exportSharedText = true;
+        $this->shareBetweenSites();
+
+        $export = $this->exportDocument(['url' => 'nl/' . $this->pageUri]);
+        $ids = array_column($export['items'], 'id');
+
+        self::assertContains('headerTitle', $ids);
+        self::assertContains('seo.seoTitle', $ids);
+        self::assertContains('pageBuilder[0].heading', $ids);
+
+        $response = $this->importDocument($this->payloadFor($export, [
+            'seo.seoTitle' => 'Gedeelde SEO-titel',
+            'pageBuilder[0].heading' => 'Gedeelde kop',
+        ]));
+
+        self::assertSame(200, $response->getStatusCode(), json_encode($response->data));
+        self::assertTrue($response->data['structureCheck']['passed']);
+
+        $nlDraft = $this->draft($response->data['draftId'], $this->nlSiteId);
+        self::assertSame('Gedeelde SEO-titel', $this->seo($nlDraft)['seoTitle']);
+        self::assertSame('Gedeelde kop', $this->nested($nlDraft, [['pageBuilder', 0]])->getFieldValue('heading'));
+
+        // What the option means: Craft writes a shared value into every site that shares
+        // it, so the other languages of this element get the Dutch text too.
+        self::assertSame('Gedeelde SEO-titel', $this->seo($this->draft($response->data['draftId']))['seoTitle']);
+
+        Craft::$app->getDrafts()->applyDraft($nlDraft);
+
+        self::assertSame('Gedeelde SEO-titel', $this->seo($this->page())['seoTitle']);
+        self::assertSame('Gedeelde kop', $this->nested($this->page(), [['pageBuilder', 0]])->getFieldValue('heading'));
+        self::assertSame('Gedeelde SEO-titel', $this->seo($this->page($this->deSiteId))['seoTitle']);
+    }
+
+    public function testTheOptionIsReadFromTheConfigFile(): void
+    {
+        self::assertFalse($this->plugin()->textExtractor->exportSharedText);
+
+        $path = dirname(__DIR__) . '/_craft/config/rankroute.php';
+        file_put_contents($path, "<?php\n\nreturn ['textFlow' => ['exportSharedText' => true]];\n");
+
+        try {
+            self::assertTrue((new TextExtractor())->exportSharedText);
+        } finally {
+            unlink($path);
+        }
+    }
+
+    // Structure check ------------------------------------------------------------------
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('sharedTextOptions')]
+    public function testTheStructureCheckStillGuardsSharedValues(bool $exportSharedText): void
+    {
+        $this->plugin()->textExtractor->exportSharedText = $exportSharedText;
+        $this->shareBetweenSites();
+
+        $draftId = $this->importDocument($this->payloadFor(
+            $this->exportDocument(['url' => 'nl/' . $this->pageUri]),
+            ['intro' => 'Een nieuwe introductie'],
+        ))->data['draftId'];
+
+        // An edit to the shared CKEditor value that is not text: a link the import could
+        // never have made. The check compares the tag skeleton either way.
+        $draft = $this->draft($draftId, $this->nlSiteId);
+        $draft->setFieldValue('headerTitle', str_replace('target="_blank"', 'target="_self"', (string)$draft->getFieldValue('headerTitle')->getRawContent()));
+
+        if (!Craft::$app->getElements()->saveElement($draft)) {
+            throw new RuntimeException('Could not save the draft: ' . implode(', ', $draft->getErrorSummary(true)));
+        }
+
+        $response = $this->textAction('verify', ['draftId' => $draftId, 'siteId' => $this->nlSiteId]);
+
+        self::assertSame(200, $response->getStatusCode(), json_encode($response->data));
+        self::assertFalse($response->data['structureCheck']['passed'], json_encode($response->data));
+        // Off, the whole value is compared; on, the value is text and its tag skeleton is.
+        self::assertCount(1, $response->data['structureCheck']['differences']);
+        self::assertStringStartsWith('fields.headerTitle.', $response->data['structureCheck']['differences'][0]['path']);
+    }
+
+    /**
+     * @return array<string, array{0: bool}>
+     */
+    public static function sharedTextOptions(): array
+    {
+        return ['shared text not exported' => [false], 'shared text exported' => [true]];
     }
 
     // Helpers --------------------------------------------------------------------------

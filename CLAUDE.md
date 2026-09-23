@@ -36,7 +36,7 @@ One plugin replacing two: `lameco/craft-entry-optimizer` (export an element to J
 - `services/SeoBulkService` — carried over from seo-import's controller
 - `dto/*` — readonly result objects with `toArray()`
 - `controllers/TextController`: `export`, `import`, `verify` (the text flow, ADR 0003)
-- `services/TextExportService`, `services/TextImportService`: text items out; validated strings into a draft via Craft's delta Matrix format, then the structure check
+- `services/TextExportService`, `services/TextImportService`: text items out; validated strings into a draft via Craft's delta Matrix format, then the structure check. Text a field's or title's translation method shares with another site of the element is not an item, unless `textFlow.exportSharedText` is on
 - `services/text/*`: `TextExtractor` (element → text items, `config/rankroute.php` excludes), `TextAddress`, `HtmlSkeleton`, `TextImportValidator`, `StructureSnapshot`, `StructureCheck`, `Fingerprint`, `SmokeRewrite`
 - `console/controllers/TextFlowController`: `rankroute/text-flow/smoke`, the per-site gate before the text flow is enabled
 

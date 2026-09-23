@@ -70,6 +70,11 @@ meta into every language on a multilingual site):
   title whose title translation method shares it. Craft propagates such a value on save,
   so writing it for one site wrote it into every site sharing it, and the structure check
   of the target site could not see that. The snapshot keeps such values in full.
+- `textFlow.exportSharedText` (default `false`) switches that off per site, for an install
+  where sharing is intended (several sites in one language). With it on, shared text is an
+  item again and a rewrite in one site changes every site sharing the value, exactly as
+  before this fix. The structure check guards the rest either way. For a multilingual site
+  the answer is not this option but translatable fields, the SEOmatic field included.
 - A full URL is resolved on its host first: only sites whose base URL has that host
   (ignoring case, port and a leading `www.`) are candidates, so a site on its own domain
   resolves to that site instead of the primary one. A path, or a URL on a host no site
@@ -118,7 +123,9 @@ meta into every language on a multilingual site):
   compared.
 - **Shared text is not optimised.** Text whose value is shared between sites (see above)
   is left out, also on single-language multi-site installs where sharing is intended.
-  Make a content field translatable per site to have it optimised.
+  Make a content field translatable per site to have it optimised, or, when sharing is
+  intended, set `textFlow.exportSharedText` to `true` and accept that a rewrite reaches
+  every site sharing the value.
 - **Unreadable values.** A field value the snapshot cannot read (the field throws) is
   recorded as its exception class plus a hash of the message. Two identical failures on
   canonical and draft still compare equal, so a field that always throws is not checked.

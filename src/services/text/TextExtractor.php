@@ -21,7 +21,8 @@ use Throwable;
  * (entry type with a title field and no title format) or a literal SEOmatic meta
  * title/description, whose value is non-empty, not a URL/e-mail/number, contains no Twig,
  * is not excluded by `config/rankroute.php`, is not shared with another site of the
- * element (see {@see isSharedWithOtherSites()}) and sits in enabled nested entries only.
+ * element (see {@see isSharedWithOtherSites()}, unless `textFlow.exportSharedText` is on)
+ * and sits in enabled nested entries only.
  *
  * CKEditor, Redactor and SEOmatic are detected by class name, so none of them is a runtime
  * dependency.
@@ -44,6 +45,15 @@ class TextExtractor extends Component
      *     inside a matching nested entry yields items.
      */
     public array $excludeEntryTypes = ['*button*'];
+
+    /**
+     * @var bool Export text that other sites of the element share (`textFlow.exportSharedText`).
+     *     Off by default: a shared value is written to every site sharing it when the draft is
+     *     saved, so a rewrite in one language would overwrite the text of every other language
+     *     of that element. On a site where sharing is intended (one language over several
+     *     sites) it can be switched on.
+     */
+    public bool $exportSharedText = false;
 
     /**
      * @var bool Skip the text of nested entries whose primary owner is another element.
@@ -70,6 +80,10 @@ class TextExtractor extends Component
 
         if (isset($textFlow['excludeEntryTypes']) && is_array($textFlow['excludeEntryTypes'])) {
             $this->excludeEntryTypes = array_values($textFlow['excludeEntryTypes']);
+        }
+
+        if (isset($textFlow['exportSharedText'])) {
+            $this->exportSharedText = (bool)$textFlow['exportSharedText'];
         }
     }
 
@@ -283,7 +297,8 @@ class TextExtractor extends Component
      * in: the field's translation key (translation method "none", or a site group, language
      * or custom key another site of the element has too) is the same there. Craft
      * propagates such a value on save, so writing it for one site would write it for every
-     * site sharing it, e.g. Dutch text into the English page. The text flow leaves it alone.
+     * site sharing it, e.g. Dutch text into the English page. The text flow leaves it alone,
+     * unless {@see $exportSharedText} is on.
      */
     public function isFieldSharedWithOtherSites(ElementInterface $element, FieldInterface $field): bool
     {
@@ -304,6 +319,10 @@ class TextExtractor extends Component
      */
     public function isSharedWithOtherSites(ElementInterface $element, callable $translationKey): bool
     {
+        if ($this->exportSharedText) {
+            return false;
+        }
+
         $otherSiteIds = array_values(array_diff($this->siteIdsOf($element), [(int)$element->siteId]));
 
         if ($otherSiteIds === []) {

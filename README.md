@@ -273,7 +273,8 @@ contains no Twig (`{{`, `{%`), is not a plain value that already looks like mark
 followed by a letter, `/`, `!` or `?`, which could never pass `html_in_plain`), its field
 handle does not match `excludeFields`, its value is not shared with another site of the
 element (translation method "not translatable", or a site group, language or custom key
-another site of the element has too; Craft would write it into every such site), and
+another site of the element has too; Craft would write it into every such site, the
+SEOmatic field and native titles included, unless `textFlow.exportSharedText` is on), and
 every nested entry on its path is enabled, has
 no type matching `excludeEntryTypes` and belongs to its owner (a nested entry shared from
 another element is left alone). Links,
@@ -412,11 +413,25 @@ return [
         'excludeFields' => ['*url', '*webhook*', 'importId', '*Id', 'llmContent', 'cocNumber'],
         // case-insensitive fnmatch patterns on nested entry type handles
         'excludeEntryTypes' => ['*button*'],
+        // Export text that other sites of the element share? Off is the safe default.
+        //
+        // Craft shares one value between sites when a field's translation method says so
+        // ("not translatable", or a site group, language or custom key another site of the
+        // element has too), and the same goes for a native title through its entry type.
+        // The SEOmatic field is a field like any other here. Saving such a value in one
+        // site writes it into every site sharing it, so with this option on, rewriting a
+        // page in one language overwrites that text in every other language of the same
+        // element. That is what went wrong on a multilingual site with the old n8n flow.
+        //
+        // Switch it on only when sharing is intended, e.g. several sites in one language.
+        // For a multilingual site the fix is the other way round: make those fields, the
+        // SEOmatic field included, translatable per site, and leave this off.
+        'exportSharedText' => false,
     ],
 ];
 ```
 
-A value replaces its default list; it is not merged.
+A list value replaces its default list; it is not merged.
 
 ### Smoke command
 

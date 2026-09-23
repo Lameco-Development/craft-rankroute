@@ -153,8 +153,10 @@ client of the text endpoints. Per site, in order:
    `*Id`, `llmContent`, `cocNumber` and nested entries of type `*button*`. Add the site's
    own non-content text fields and button-like entry types before the smoke run.
    On a multi-site install, check that content text fields and the SEOmatic field are
-   translatable per site: text shared between sites is never exported, so it is not
-   optimised (ADR 0003, Limits).
+   translatable per site: text shared between sites is not exported, so it is not
+   optimised (ADR 0003, Limits). Only on an install where sites share a language on
+   purpose is `textFlow.exportSharedText => true` an option; on a multilingual site it
+   would let a rewrite in one language overwrite the others.
 4. **Run the smoke command** on the site's server:
 
    ```bash

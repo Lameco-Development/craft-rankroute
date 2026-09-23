@@ -80,7 +80,7 @@ One string of an element the text flow may rewrite: `{id, type, value, maxLength
 is `plain` (PlainText, native title, SEOmatic meta) or `html` (CKEditor, Redactor). Only
 non-empty values that are not a URL, e-mail address or number, contain no Twig, are not
 excluded by `config/rankroute.php` and are not shared with another site of the element
-(a translation key other sites have too) become items.
+(a translation key other sites have too, `textFlow.exportSharedText` off) become items.
 _Avoid_: field (an item can be a title or SEO meta), block
 
 **Address**:
