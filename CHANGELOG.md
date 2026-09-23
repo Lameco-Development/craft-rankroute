@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0](https://github.com/Lameco-Development/craft-rankroute/compare/0.0.1...0.1.0) (2026-09-23)
+
+
+### Features
+
+* tekstflow die alleen tekst exporteert en importeert ([#14](https://github.com/Lameco-Development/craft-rankroute/issues/14)) ([1b5e743](https://github.com/Lameco-Development/craft-rankroute/commit/1b5e7430757b84224c1b346f34e2400c5cf89b65))
+
 ## 0.0.1 (2026-09-15)
 
 
