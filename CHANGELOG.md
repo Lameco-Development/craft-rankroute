@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/Lameco-Development/craft-rankroute/compare/0.1.0...0.1.1) (2026-09-25)
+
+
+### Bug Fixes
+
+* een geweigerde sleutel op de tekstflow is een 401, geen 404 ([#16](https://github.com/Lameco-Development/craft-rankroute/issues/16)) ([7114523](https://github.com/Lameco-Development/craft-rankroute/commit/71145235670ba63006adda2d896d853be8fba932))
+
 ## [0.1.0](https://github.com/Lameco-Development/craft-rankroute/compare/0.0.1...0.1.0) (2026-09-23)
 
 
