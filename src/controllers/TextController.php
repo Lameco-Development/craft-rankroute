@@ -37,22 +37,21 @@ class TextController extends Controller
         'verify' => self::ALLOW_ANONYMOUS_LIVE,
     ];
 
-    public function beforeAction($action): bool
+    /**
+     * The key check runs here rather than in beforeAction(), and a rejection is returned
+     * rather than thrown, so the body is the text flow's error shape. It must be the action's
+     * own response: Craft treats an action without one as no action and routes the path on
+     * as a page, which turned a rejected key into Craft's 404 on `/actions/rankroute/text/…`.
+     */
+    public function runAction($id, $params = []): mixed
     {
-        if (!parent::beforeAction($action)) {
-            return false;
-        }
-
         try {
             $this->requireApiKey();
         } catch (UnauthorizedHttpException $e) {
-            // Answered here rather than thrown, so the body is the text flow's error shape.
-            $this->errorResponse($e);
-
-            return false;
+            return $this->errorResponse($e);
         }
 
-        return true;
+        return parent::runAction($id, $params);
     }
 
     /**
