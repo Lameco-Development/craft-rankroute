@@ -9,6 +9,7 @@ use craft\elements\Entry;
 use craft\events\ModelEvent;
 use lameco\rankroute\services\text\HtmlSkeleton;
 use yii\base\Event;
+use yii\web\Response;
 
 /**
  * The text flow end to end through the booted app: export shape and exclusions,
@@ -161,6 +162,27 @@ final class TextFlowTest extends TextFlowFixtureTestCase
         }
 
         self::assertSame(0, $this->draftCount());
+    }
+
+    /**
+     * Craft treats an action that returns no response as "no action" and routes the path on
+     * as a page: `/actions/rankroute/text/export` with a rejected key used to come back as
+     * Craft's own 404, and `?action=` as the homepage with a 401. The rejection must be the
+     * action's own response, so this runs the action without textAction()'s fallback to
+     * Craft's response object.
+     */
+    public function testARejectedKeyIsTheActionsOwnResponse(): void
+    {
+        CraftHarness::useWebRequest();
+        $this->plugin();
+
+        foreach (['export', 'import', 'create', 'verify'] as $action) {
+            $result = Craft::$app->runAction('rankroute/text/' . $action);
+
+            self::assertInstanceOf(Response::class, $result, $action);
+            self::assertSame(401, $result->getStatusCode(), $action);
+            self::assertSame(['error' => 'Authentication required'], $result->data, $action);
+        }
     }
 
     // Fingerprint ----------------------------------------------------------------------
