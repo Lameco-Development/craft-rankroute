@@ -129,7 +129,16 @@ class TextCreateService extends Component
 
         $section = $element->getSection();
 
-        return $section !== null && $section->type !== Section::TYPE_SINGLE;
+        return $section !== null && self::isCopyableSection($section);
+    }
+
+    /**
+     * A section whose entries can be the source of a new page: a channel or a structure,
+     * not a single. Shared with `text/templates`, so it lists exactly what can be copied.
+     */
+    public static function isCopyableSection(Section $section): bool
+    {
+        return $section->type !== Section::TYPE_SINGLE;
     }
 
     public static function isValidSlug(mixed $slug): bool

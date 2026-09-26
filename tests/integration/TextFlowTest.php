@@ -152,7 +152,7 @@ final class TextFlowTest extends TextFlowFixtureTestCase
 
     public function testEveryEndpointNeedsTheApiKey(): void
     {
-        foreach (['export' => ['id' => $this->pageId], 'import' => [], 'verify' => ['draftId' => 1]] as $action => $query) {
+        foreach (['export' => ['id' => $this->pageId], 'import' => [], 'verify' => ['draftId' => 1], 'templates' => []] as $action => $query) {
             $missing = $this->textAction($action, $query, '{}', apiKey: null);
             self::assertSame(401, $missing->getStatusCode(), $action);
             self::assertArrayHasKey('error', $missing->data);
@@ -176,7 +176,7 @@ final class TextFlowTest extends TextFlowFixtureTestCase
         CraftHarness::useWebRequest();
         $this->plugin();
 
-        foreach (['export', 'import', 'create', 'verify'] as $action) {
+        foreach (['export', 'import', 'create', 'verify', 'templates'] as $action) {
             $result = Craft::$app->runAction('rankroute/text/' . $action);
 
             self::assertInstanceOf(Response::class, $result, $action);

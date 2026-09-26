@@ -61,6 +61,7 @@ class OptimizerController extends Controller
                 'textImport' => 'rankroute/text/import',
                 'textVerify' => 'rankroute/text/verify',
                 'textCreate' => 'rankroute/text/create',
+                'textTemplates' => 'rankroute/text/templates',
             ],
         ]);
     }

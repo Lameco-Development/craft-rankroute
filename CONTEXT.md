@@ -126,12 +126,19 @@ A copy of an existing entry (the *source*) made by `text/create`: an unpublished
 the source's blocks, buttons, links and settings, new text in every text item, a new slug,
 and the placeholder image in place of every image. Always disabled, so publishing it still
 does not put it live. See ADR 0004.
-_Avoid_: template (there is no template concept; any entry can be the source), clone
+_Avoid_: template (a template is a kind of page, see **Template**; any entry of one can be the source), clone
 
 **Source**:
 The existing entry a new page is copied from, chosen by the customer. Its text export is
 the skeleton the backend fills.
 _Avoid_: base page, example page
+
+**Template**:
+A kind of page a new page can be copied from: one section (channel or structure) and one of
+its entry types, in one site, with at least one live entry with a URL there. `text/templates`
+lists them with their live entry count and up to three recent live entries as samples; the
+customer then picks one entry of that kind as the source.
+_Avoid_: page type, layout
 
 **Placeholder image**:
 The one asset (`rankroute-placeholder.png`, "RankRoute placeholder: vervang deze

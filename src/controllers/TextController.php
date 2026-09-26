@@ -14,7 +14,7 @@ use yii\web\Response;
 use yii\web\UnauthorizedHttpException;
 
 /**
- * `rankroute/text/*`: the text flow (export, import, create, verify). Errors other than
+ * `rankroute/text/*`: the text flow (export, import, create, verify, templates). Errors other than
  * import/create validation answer `{"error": "…"}` with their HTTP status; validation and
  * structure check failures answer their own documented body.
  */
@@ -35,6 +35,7 @@ class TextController extends Controller
         'import' => self::ALLOW_ANONYMOUS_LIVE,
         'create' => self::ALLOW_ANONYMOUS_LIVE,
         'verify' => self::ALLOW_ANONYMOUS_LIVE,
+        'templates' => self::ALLOW_ANONYMOUS_LIVE,
     ];
 
     /**
@@ -163,6 +164,19 @@ class TextController extends Controller
                 'draftElementId' => (int)$draft->id,
                 'structureCheck' => $check->toArray(),
             ]);
+        } catch (Throwable $e) {
+            return $this->errorResponse($e);
+        }
+    }
+
+    /**
+     * `GET [?siteId=<id>]`: the kinds of page (section × entry type) a new page can be
+     * copied from in that site, the primary site when omitted. Read only.
+     */
+    public function actionTemplates(): Response
+    {
+        try {
+            return $this->asJson(Plugin::getInstance()->textTemplatesService->templates($this->request->getQueryParam('siteId')));
         } catch (Throwable $e) {
             return $this->errorResponse($e);
         }

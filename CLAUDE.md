@@ -35,9 +35,10 @@ One plugin replacing two: `lameco/craft-entry-optimizer` (export an element to J
 - `services/ExportService`, `services/ImportService`, `services/FieldHandlerRegistry`, `services/fieldhandlers/*` — carried over from entry-optimizer
 - `services/SeoBulkService` — carried over from seo-import's controller
 - `dto/*` — readonly result objects with `toArray()`
-- `controllers/TextController`: `export`, `import`, `create`, `verify` (the text flow, ADR 0003; `create` ADR 0004)
+- `controllers/TextController`: `export`, `import`, `create`, `verify`, `templates` (the text flow, ADR 0003; `create` ADR 0004; `templates` `docs/plans/2026-09-26-text-templates.md`)
 - `services/TextExportService`, `services/TextImportService`: text items out; validated strings into a draft via Craft's delta Matrix format, then the structure check. Text a field's or title's translation method shares with another site of the element is not an item, unless `textFlow.exportSharedText` is on
 - `services/TextCreateService`: a new page from a source entry: validate like import, `duplicateElement` as unpublished draft (always disabled, in every site), write the strings and the placeholder image, structure check in copy mode, 409 on a taken slug
+- `services/TextTemplatesService`: `text/templates`, read only: per site the section × entry type kinds `text/create` can copy (`TextCreateService::isCopyableSection()`/`isCopyable()`), live entry count, up to 3 newest live samples with a URL
 - `services/text/*`: `TextExtractor` (element → text items and non-empty Assets fields, `config/rankroute.php` excludes), `TextAddress`, `HtmlSkeleton`, `TextImportValidator`, `TextWriter` (values at addresses onto a draft, shared by import and create), `StructureSnapshot` (+ copy mode), `StructureCheck`, `Fingerprint`, `PlaceholderImage` (bundled `src/resources/rankroute-placeholder.png`, uploaded once), `SmokeRewrite`
 - `console/controllers/TextFlowController`: `rankroute/text-flow/smoke`, the per-site gate before the text flow is enabled
 
