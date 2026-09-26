@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/Lameco-Development/craft-rankroute/compare/0.1.1...0.2.0) (2026-09-26)
+
+
+### Features
+
+* text/templates lists the kinds of page a new page can be copied from ([#18](https://github.com/Lameco-Development/craft-rankroute/issues/18)) ([6e31db2](https://github.com/Lameco-Development/craft-rankroute/commit/6e31db2659895c9539c73ec06f4cfeac24a5e764))
+
 ## [0.1.1](https://github.com/Lameco-Development/craft-rankroute/compare/0.1.0...0.1.1) (2026-09-25)
 
 
