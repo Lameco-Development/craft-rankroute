@@ -27,6 +27,7 @@ use lameco\rankroute\services\text\TextExtractor;
 use lameco\rankroute\services\TextCreateService;
 use lameco\rankroute\services\TextExportService;
 use lameco\rankroute\services\TextImportService;
+use lameco\rankroute\services\TextTemplatesService;
 
 /**
  * RankRoute connector: element export/import for AI content optimisation and bulk SEO
@@ -45,6 +46,7 @@ use lameco\rankroute\services\TextImportService;
  * @property-read TextExportService $textExportService
  * @property-read TextImportService $textImportService
  * @property-read TextCreateService $textCreateService
+ * @property-read TextTemplatesService $textTemplatesService
  * @property-read PlaceholderImage $placeholderImage
  */
 class Plugin extends BasePlugin
@@ -67,6 +69,7 @@ class Plugin extends BasePlugin
                 'textExportService' => ['class' => TextExportService::class],
                 'textImportService' => ['class' => TextImportService::class],
                 'textCreateService' => ['class' => TextCreateService::class],
+                'textTemplatesService' => ['class' => TextTemplatesService::class],
                 'placeholderImage' => ['class' => PlaceholderImage::class],
             ],
         ];

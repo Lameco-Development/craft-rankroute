@@ -59,6 +59,7 @@ same controller actions and honour the same `RANKROUTE_API_KEY` — never the ol
 | `rankroute/text/import` | POST | — | JSON `{elementId, siteId, fingerprint, items}` |
 | `rankroute/text/create` | POST | — | JSON `{sourceElementId, siteId, fingerprint, slug, items}` |
 | `rankroute/text/verify` | GET | — | `draftId`, optional `siteId` (query) |
+| `rankroute/text/templates` | GET | — | optional `siteId` (query) |
 
 **Legacy aliases are removed in 0.1.0.** Removing them is a breaking change and waits for
 every site in `docs/migration.md` to be ticked off.
@@ -79,7 +80,8 @@ every site in `docs/migration.md` to be ticked off.
     "textExport": "rankroute/text/export",
     "textImport": "rankroute/text/import",
     "textVerify": "rankroute/text/verify",
-    "textCreate": "rankroute/text/create"
+    "textCreate": "rankroute/text/create",
+    "textTemplates": "rankroute/text/templates"
   }
 }
 ```
@@ -468,6 +470,45 @@ anything is written.
 a JSON line with the source, site, slug, placeholder and changed items); a retry with the
 same key for the same source and site answers from that draft with `"replayed": true`. The
 key lives in the draft, so once the page is published a new request creates another page.
+
+### Text templates
+
+`GET /actions/rankroute/text/templates[?siteId=<siteId>]`
+
+Lists the kinds of page a new page (`text/create`) can be copied from in one site: one
+template per section and entry type. Read only. Without `siteId` the primary site is used;
+a `siteId` that is not the id of a site (not only digits, or unknown) answers `400`.
+
+```json
+{
+  "siteId": 1,
+  "templates": [
+    {
+      "section": { "handle": "articles", "name": "Artikelen", "type": "channel" },
+      "entryType": { "handle": "article", "name": "Artikel" },
+      "liveEntries": 42,
+      "samples": [
+        { "elementId": 123, "title": "Wat doet een product owner?", "url": "https://example.com/artikelen/product-owner" }
+      ]
+    }
+  ]
+}
+```
+
+- **Listed**: every entry type of a channel or structure section (never a single, never
+  nested entries; the same rule as the `text/create` source) whose section has URLs in that
+  site and that has at least one live entry with a URL in that site. `templates` is `[]`
+  when nothing qualifies.
+- **`section.type`**: `channel` or `structure`. Names are the raw section and entry type
+  names, not translated.
+- **`liveEntries`** (int, at least 1): live top-level entries of that section and entry type
+  in that site (enabled, enabled for the site, post date passed, not expired; drafts,
+  revisions and trashed entries excluded), with or without a URL.
+- **`samples`**: 1 to 3 of those live entries with a non-empty URL, newest post date first
+  (then highest id). `title` is a string (empty when the entry has none), `url` the
+  absolute URL in that site.
+- **Order**: most `liveEntries` first, then section name, then entry type name (natural,
+  case-insensitive), then the handles.
 
 ### Text verify
 

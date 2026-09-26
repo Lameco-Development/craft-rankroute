@@ -92,6 +92,7 @@ final class ActionDispatchTest extends IntegrationTestCase
                 'textImport' => 'rankroute/text/import',
                 'textVerify' => 'rankroute/text/verify',
                 'textCreate' => 'rankroute/text/create',
+                'textTemplates' => 'rankroute/text/templates',
             ],
         ], $data);
     }
