@@ -83,6 +83,7 @@ class TextExportService extends Component
                 'type' => get_class($element),
                 'url' => $element->getUrl(),
                 'cpEditUrl' => $element->getCpEditUrl(),
+                'language' => $element->getSite()->language,
             ],
             fingerprint: $plugin->textFingerprint->compute($element, $items),
             items: $items,

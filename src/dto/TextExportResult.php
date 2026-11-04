@@ -8,7 +8,8 @@ namespace lameco\rankroute\dto;
 readonly class TextExportResult
 {
     /**
-     * @param array{id: int, siteId: int, type: string, url: string|null, cpEditUrl: string|null} $element
+     * @param array{id: int, siteId: int, type: string, url: string|null, cpEditUrl: string|null, language: string} $element
+     *     `language` is the element's site language (`nl-NL`, `en-GB`), the language its text is in
      * @param string $fingerprint `sha256:` + hash of the element's structure and text
      * @param TextItem[] $items
      */

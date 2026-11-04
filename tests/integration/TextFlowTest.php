@@ -52,12 +52,13 @@ final class TextFlowTest extends TextFlowFixtureTestCase
         $data = $response->data;
 
         self::assertSame(['element', 'fingerprint', 'items'], array_keys($data));
-        self::assertSame(['id', 'siteId', 'type', 'url', 'cpEditUrl'], array_keys($data['element']));
+        self::assertSame(['id', 'siteId', 'type', 'url', 'cpEditUrl', 'language'], array_keys($data['element']));
         self::assertSame($this->pageId, $data['element']['id']);
         self::assertSame($this->primarySiteId, $data['element']['siteId']);
         self::assertSame(Entry::class, $data['element']['type']);
         self::assertStringContainsString('solutions/applications', (string)$data['element']['url']);
         self::assertNotEmpty($data['element']['cpEditUrl']);
+        self::assertSame(Craft::$app->getSites()->getPrimarySite()->language, $data['element']['language']);
         self::assertMatchesRegularExpression('/^sha256:[0-9a-f]{64}$/', $data['fingerprint']);
 
         self::assertSame(self::EXPECTED_IDS, array_column($data['items'], 'id'));
@@ -376,6 +377,7 @@ final class TextFlowTest extends TextFlowFixtureTestCase
     {
         $export = $this->exportDocument(['url' => 'nl/' . $this->pageUri]);
         self::assertSame($this->nlSiteId, $export['element']['siteId']);
+        self::assertSame('nl-NL', $export['element']['language']);
 
         $items = array_column($export['items'], 'value', 'id');
         self::assertSame('Toepassingen', $items['title']);
