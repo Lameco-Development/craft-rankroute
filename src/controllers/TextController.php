@@ -14,7 +14,7 @@ use yii\web\Response;
 use yii\web\UnauthorizedHttpException;
 
 /**
- * `rankroute/text/*`: the text flow (export, import, create, verify, templates). Errors other than
+ * `rankroute/text/*`: the text flow (export, import, create, verify, templates, sites). Errors other than
  * import/create validation answer `{"error": "…"}` with their HTTP status; validation and
  * structure check failures answer their own documented body.
  */
@@ -36,6 +36,7 @@ class TextController extends Controller
         'create' => self::ALLOW_ANONYMOUS_LIVE,
         'verify' => self::ALLOW_ANONYMOUS_LIVE,
         'templates' => self::ALLOW_ANONYMOUS_LIVE,
+        'sites' => self::ALLOW_ANONYMOUS_LIVE,
     ];
 
     /**
@@ -177,6 +178,40 @@ class TextController extends Controller
     {
         try {
             return $this->asJson(Plugin::getInstance()->textTemplatesService->templates($this->request->getQueryParam('siteId')));
+        } catch (Throwable $e) {
+            return $this->errorResponse($e);
+        }
+    }
+
+    /**
+     * `GET`: every site with URLs, with its language and base URL, so a client knows which
+     * language a page is in from its URL alone (the same longest base-path prefix
+     * {@see \lameco\rankroute\services\ElementResolver} uses). Read only.
+     */
+    public function actionSites(): Response
+    {
+        try {
+            $sites = [];
+
+            foreach (Craft::$app->getSites()->getAllSites() as $site) {
+                $baseUrl = $site->hasUrls ? $site->getBaseUrl() : null;
+
+                if ($baseUrl === null || $baseUrl === '') {
+                    continue;
+                }
+
+                $sites[] = [
+                    'id' => (int)$site->id,
+                    'handle' => $site->handle,
+                    'name' => $site->getName(),
+                    'language' => $site->language,
+                    'baseUrl' => $baseUrl,
+                    'primary' => (bool)$site->primary,
+                    'enabled' => (bool)$site->enabled,
+                ];
+            }
+
+            return $this->asJson(['sites' => $sites]);
         } catch (Throwable $e) {
             return $this->errorResponse($e);
         }

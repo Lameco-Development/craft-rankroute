@@ -60,6 +60,7 @@ same controller actions and honour the same `RANKROUTE_API_KEY` — never the ol
 | `rankroute/text/create` | POST | — | JSON `{sourceElementId, siteId, fingerprint, slug, items}` |
 | `rankroute/text/verify` | GET | — | `draftId`, optional `siteId` (query) |
 | `rankroute/text/templates` | GET | — | optional `siteId` (query) |
+| `rankroute/text/sites` | GET | — | — |
 
 **Legacy aliases are removed in 0.1.0.** Removing them is a breaking change and waits for
 every site in `docs/migration.md` to be ticked off.
@@ -81,7 +82,8 @@ every site in `docs/migration.md` to be ticked off.
     "textImport": "rankroute/text/import",
     "textVerify": "rankroute/text/verify",
     "textCreate": "rankroute/text/create",
-    "textTemplates": "rankroute/text/templates"
+    "textTemplates": "rankroute/text/templates",
+    "textSites": "rankroute/text/sites"
   }
 }
 ```
@@ -512,6 +514,24 @@ a `siteId` that is not the id of a site (not only digits, or unknown) answers `4
   absolute URL in that site.
 - **Order**: most `liveEntries` first, then section name, then entry type name (natural,
   case-insensitive), then the handles.
+
+### Text sites
+
+`GET /actions/rankroute/text/sites`
+
+Every site with URLs, so a client can tell from a page URL alone which site, and so which
+language, it belongs to: match the URL against the base URLs the way the export resolves
+one (same host first, then the longest base path). Read only; sites without URLs are left
+out.
+
+```json
+{
+  "sites": [
+    { "id": 1, "handle": "gbEn", "name": "Avineon Tensing UK", "language": "en-GB", "baseUrl": "https://www.example.com/en-gb", "primary": true, "enabled": true },
+    { "id": 2, "handle": "nlNl", "name": "Avineon Tensing NL", "language": "nl-NL", "baseUrl": "https://www.example.com/nl-nl", "primary": false, "enabled": true }
+  ]
+}
+```
 
 ### Text verify
 
