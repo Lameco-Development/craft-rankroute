@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/Lameco-Development/craft-rankroute/compare/0.2.0...0.3.0) (2026-11-04)
+
+
+### Features
+
+* taal van de site in text/export en nieuw endpoint text/sites ([#20](https://github.com/Lameco-Development/craft-rankroute/issues/20)) ([68f0d82](https://github.com/Lameco-Development/craft-rankroute/commit/68f0d828c41f6f585292b3403575c238589776d4))
+
 ## [0.2.0](https://github.com/Lameco-Development/craft-rankroute/compare/0.1.1...0.2.0) (2026-09-26)
 
 
