@@ -91,36 +91,4 @@ readonly class ImportResult
             message: 'No changes detected',
         );
     }
-
-    /**
-     * Convert to array for JSON serialization
-     *
-     * @return array<string, mixed>
-     */
-    public function toArray(): array
-    {
-        $result = [
-            'success' => $this->success,
-            'entryId' => $this->entryId,
-            'message' => $this->message,
-        ];
-
-        if ($this->draftId !== null) {
-            $result['draftId'] = $this->draftId;
-        }
-
-        if (!empty($this->updatedFields)) {
-            $result['updatedFields'] = $this->updatedFields;
-        }
-
-        if ($this->cpEditUrl !== null) {
-            $result['cpEditUrl'] = $this->cpEditUrl;
-        }
-
-        if (!empty($this->errors)) {
-            $result['errors'] = $this->errors;
-        }
-
-        return $result;
-    }
 }

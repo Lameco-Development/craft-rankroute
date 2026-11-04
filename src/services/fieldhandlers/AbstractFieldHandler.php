@@ -215,15 +215,4 @@ abstract class AbstractFieldHandler implements FieldHandlerInterface
     {
         \Craft::warning($message, $category);
     }
-
-    /**
-     * Log an error message
-     *
-     * @param string $message The message to log
-     * @param string $category The log category
-     */
-    protected function logError(string $message, string $category = 'rankroute'): void
-    {
-        \Craft::error($message, $category);
-    }
 }
