@@ -252,7 +252,8 @@ Commerce products are found; a nested entry, asset or any other element id answe
     "siteId": 1,
     "type": "craft\\elements\\Entry",
     "url": "https://example.com/applications",
-    "cpEditUrl": "https://example.com/admin/entries/pages/51"
+    "cpEditUrl": "https://example.com/admin/entries/pages/51",
+    "language": "en-GB"
   },
   "fingerprint": "sha256:9f2c…",
   "items": [
@@ -265,6 +266,8 @@ Commerce products are found; a nested entry, asset or any other element id answe
 }
 ```
 
+- **`element.language`**: the language of the element's site (Craft's `Site::$language`,
+  such as `nl-NL` or `en-GB`), so a client writes new text in the language the page is in.
 - **Address** (`id`): `title`, `seo.seoTitle`, `seo.seoDescription`, a field handle, or
   `<matrixHandle>[<n>].` steps in front of one of those. `n` is 0-based over all nested
   entries of that field in sort order, disabled ones included.
