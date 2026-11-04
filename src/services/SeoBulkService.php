@@ -27,7 +27,8 @@ class SeoBulkService extends Component
      * Accepts the three shapes n8n sends (CONTEXT.md — Bulk meta item): a flat array, a
      * `{results: [...]}` object, or a `[{results: [...]}]` array.
      *
-     * @return array<int, array<string, mixed>>
+     * @return array<int, mixed> Only the outer container is validated, so an element is not
+     *     guaranteed to be an array — `[1,2,3]` reaches import() intact.
      * @throws BadRequestHttpException if the body is empty, invalid JSON, or has no items
      */
     public function normalizeItems(string $json): array
